@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Grid Trader</title>
+  <meta name="description" content="Live demo: an AI agent that trades a grid-scale battery for profit while protecting its lifespan.">
+  <meta property="og:title" content="AI Grid Trader">
+  <meta property="og:description" content="An AI that trades a grid battery, and protects it. Interactive live demo.">
+  <meta name="theme-color" content="#0c0a09">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230c0a09'/%3E%3Cpath d='M18 5 9 18h6l-2 9 9-13h-6z' fill='%23fff'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <header class="wrap top">
+    <div class="brand">
+      <span class="mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="15" height="15"><path d="M13.5 2 5 14h5.5L9 22l8.5-12H12z" fill="currentColor"/></svg>
+      </span>
+      AI Grid Trader
+    </div>
+    <div class="actions">
+      <button class="btn" id="btn-share" type="button" title="Copy a link to this exact scenario">
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span class="lbl">Share</span>
+      </button>
+      <button class="btn" id="btn-present" type="button" title="Full screen (F)">
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span class="lbl">Present</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="intro">
+      <p class="eyebrow"><span class="live" aria-hidden="true"></span>Live demo · Battery energy trading</p>
+      <h1>An AI that trades a grid battery, and protects it.</h1>
+      <p class="lede">The agent plans 48 hours of buying and selling on the wholesale market. It counts
+        battery wear as a real cost, so it only trades when the profit is worth it.</p>
+    </section>
+
+    <div class="chips" role="group" aria-label="Market scenario">
+      <span class="chips-label">Market</span>
+      <div id="scenario-chips" class="chip-row"></div>
+      <button class="btn btn-ghost" id="btn-shuffle" type="button" title="Generate a new market with the same scenario">
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.34 5.66M20 4v7h-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="lbl">New day</span>
+      </button>
+    </div>
+
+    <section class="card">
+      <div class="kpis" id="kpis"></div>
+      <div class="legend" aria-hidden="true">
+        <span><i class="sw" style="background:var(--price)"></i>Price ($/MWh)</span>
+        <span><i class="sw sw-area"></i>Battery charge (%)</span>
+        <span><i class="tri" style="color:var(--charge)">▲</i>AI buys</span>
+        <span><i class="tri" style="color:var(--discharge)">▼</i>AI sells</span>
+      </div>
+      <div id="chart-main" class="chart" role="img" aria-label="Electricity price over 48 hours with the battery's charge level and the AI's buy and sell decisions"></div>
+      <p class="insight" id="insight"></p>
+    </section>
+
+    <section class="card controls">
+      <div class="grid" id="main-controls"></div>
+      <details>
+        <summary>More settings</summary>
+        <div class="grid" id="more-controls"></div>
+      </details>
+    </section>
+
+    <section class="split">
+      <div class="card">
+        <h2>AI vs. rule-based bot</h2>
+        <p class="note">Same market, same battery, same accounting. The bot buys when the price dips below its
+          3-hour average and sells when it rises above it.</p>
+        <table class="compare" id="compare"></table>
+      </div>
+      <div class="card">
+        <h2>Profit after battery wear</h2>
+        <div class="legend" aria-hidden="true">
+          <span><i class="sw" style="background:var(--ink)"></i>AI agent</span>
+          <span><i class="sw sw-dot"></i>Rule-based bot</span>
+        </div>
+        <div id="chart-cum" class="chart chart-sm" role="img" aria-label="Cumulative profit of the AI compared with the rule-based bot"></div>
+      </div>
+    </section>
+
+    <section class="how">
+      <div>
+        <span class="num">01</span>
+        <h3>Buy low, sell high</h3>
+        <p>The agent charges in the overnight lull and the midday solar dip, then sells into the morning and evening peaks.</p>
+      </div>
+      <div>
+        <span class="num">02</span>
+        <h3>Every cycle has a price</h3>
+        <p>Each MWh through the battery carries a wear cost. Trades that don't beat it are skipped, so the asset lasts longer.</p>
+      </div>
+      <div>
+        <span class="num">03</span>
+        <h3>Decisive, not twitchy</h3>
+        <p>Starting a new charge or discharge run has a cost, so the agent commits to a few clean cycles instead of chasing every price wiggle.</p>
+      </div>
+    </section>
+
+    <details class="method">
+      <summary>How the agent decides</summary>
+      <p>Every 15 minutes the agent picks how much to charge, discharge or hold. Its reward is:</p>
+      <p class="formula">reward = arbitrage cash − battery wear − micro-cycling penalty</p>
+      <p>The state is the time, the battery's charge level and whether it is currently charging, discharging or
+        holding. The agent's decision table is computed with exact Bellman updates, which give the same answer a
+        fully trained Q-learning agent converges to, in milliseconds and with identical results every time.</p>
+    </details>
+  </main>
+
+  <footer class="wrap">
+    <span>Simulated wholesale prices. Results are illustrative and cover energy arbitrage only.</span>
+    <span><span id="solve-time"></span> · <a href="https://github.com/nolimitbaiza/ai-grid-trader">Source on GitHub</a></span>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="assets/vendor/plotly-basic-2.35.2.min.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>
