@@ -237,6 +237,14 @@ test("lifetime: more cycling wears the battery faster and needs new cells sooner
   }
 });
 
+test("lifetime: a tax credit lowers the upfront cost but O&M stays on the full installed cost", () => {
+  const full = E.lifetime(LIFE_BASE);
+  const credit = E.lifetime({ ...LIFE_BASE, capex: LIFE_BASE.capex * 0.7, omBase: LIFE_BASE.capex });
+  for (let i = 0; i < full.rows.length; i++) assert.equal(credit.rows[i].om, full.rows[i].om, "same O&M each year");
+  assert.ok(Math.abs(credit.npv - full.npv - 0.3 * LIFE_BASE.capex) < 1, "NPV improves by exactly the credit");
+  assert.ok(credit.irr > full.irr, "higher IRR");
+});
+
 // ---------------------------------------------------------------------------- why this trade?
 test("every AI trade can be explained with consistent numbers", () => {
   const b = DEFAULT_BATTERY;

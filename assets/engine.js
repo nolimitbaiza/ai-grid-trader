@@ -469,8 +469,8 @@ function createEngine() {
   //  - when health drops below `augmentAt`, new cells restore it to 100% (cost per kWh replaced,
   //    getting cheaper each year)
   //  - trading revenue scales with health; other revenue (grid services, capacity) does not
-  //  - O&M is a fixed share of the installed cost per year
-  // o: { years, capex, capKWh, trading, cyclesPerYear, other, cycleLife, calendarFade, augmentAt,
+  //  - O&M is a fixed share of the installed cost per year (omBase: cost before any tax credit)
+  // o: { years, capex, omBase, capKWh, trading, cyclesPerYear, other, cycleLife, calendarFade, augmentAt,
   //      augCost, augDecline, omPct, discount, warrantyCycles }
   function lifetime(o) {
     const fadePerCycle = 0.2 / o.cycleLife;
@@ -480,7 +480,7 @@ function createEngine() {
       const start = health;
       const end = start - o.calendarFade - o.cyclesPerYear * fadePerCycle;
       const revenue = o.trading * (start + end) / 2 + o.other;
-      const om = o.omPct * o.capex;
+      const om = o.omPct * (o.omBase != null ? o.omBase : o.capex);   // O&M on the full installed cost
       let aug = 0, after = end;
       if (end < o.augmentAt && y < o.years - 1) {
         aug = (1 - end) * o.capKWh * o.augCost * Math.pow(1 - o.augDecline, y);

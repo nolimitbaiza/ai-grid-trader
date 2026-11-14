@@ -112,9 +112,38 @@ Energy trading is only one way a battery earns. The **Revenue streams** section 
   and yearly yield, not measured data). Clipping alone adds little; the bigger real benefits of
   pairing with solar (shared grid connection, tax credits) aren't modelled.
 
-**Grid-services and capacity prices are adjustable assumptions, not market data.** The defaults are
-rough illustrative levels (California pays for capacity through resource adequacy; Germany and
-Australia's NEM don't). The annual ROI shown at the top includes every stream.
+**Grid-services prices default to real 2025 averages** for products a battery can sell with the
+same reserved megawatt (rebuild with `tools/build_services.py`):
+
+| Market | Product | 2025 average, per MW per hour | Source |
+|---|---|---|---|
+| California | Regulation up + regulation down, day-ahead (mileage not included) | $7.2 | CAISO OASIS |
+| Germany | FCR (primary frequency reserve) | €15.2 (aFRR up + down: €33.6) | regelleistung.net |
+| South Australia | Six contingency FCAS markets combined (raise and lower, 6 s / 60 s / 5 min) | A$5.6 | AEMO |
+
+In South Australia no power is reserved by default, because trading pays far more there. These are
+averages over the year; prices fall as more batteries join these small markets.
+**Capacity payments are an illustrative assumption**: California pays for capacity through resource
+adequacy contracts, whose prices vary widely; Germany and Australia's NEM have no capacity payment.
+The annual ROI shown at the top includes every stream.
+
+## Costs and tax credit
+
+Default installed costs are 2025 benchmarks for a utility-scale 4-hour battery, all-in (equipment,
+installation and grid connection), in each market's currency:
+
+| Market | Installed cost | New cells (battery part) | Basis |
+|---|---|---|---|
+| California | $280/kWh, minus a 30% investment tax credit | $150/kWh | BloombergNEF 2025 US turnkey average ($219) + ~$60 installation and grid connection (Ember, 2025); federal storage ITC (IRC §48E) |
+| Germany | €205/kWh | €120/kWh | BloombergNEF 2025 Europe turnkey average ($177 ≈ €155) + ~€50 installation and grid connection |
+| South Australia | A$385/kWh | A$265/kWh | CSIRO GenCost 2025-26, 4-hour battery (A$265 battery + A$120 balance of plant) |
+
+The **Tax credit** slider (under More settings) reduces the upfront cost; O&M is still charged on
+the full installed cost. The US credit has eligibility rules (including foreign-entity sourcing
+limits) and phases down from the early 2030s; check a real project with a tax adviser.
+
+The agent's **wear cost per cycle** defaults to the physical wear these assumptions imply (new cells
+for the 20% of capacity a cycle-life's worth of cycles uses up): about $500, €400 and A$900.
 
 ## Battery lifetime
 
@@ -124,12 +153,19 @@ health falls 20% over the cycle life plus 1% a year with age; below 80% health, 
 with health. Shown for the AI and the rule-based bot side by side: lifetime value (NPV), IRR,
 payback, new cells needed, health over time, cumulative cash, and cycles per year against a typical
 365-cycle-a-year warranty. It also shows the wear cost per cycle these assumptions imply, with a
-button to set the agent's wear price to it. No tax, financing or residual value.
+button to set the agent's wear price to it. No financing, other taxes or residual value.
 
-With the defaults (100 MWh / 25 MW at 300 per kWh installed, 2025 prices) the 15-year picture is
-honest rather than rosy: South Australia pays back in about 4 years; California and Germany don't
-pay back within 15 years at that installed cost. Installed cost and the services and capacity prices
-are the big levers; set them to your own numbers.
+With the defaults (100 MWh / 25 MW, 2025 prices and costs, 8% discount rate) the 15-year picture is
+as follows for the AI agent (the rule-based bot loses money in every market):
+
+| Market | Revenue per year | Lifetime value (NPV) | IRR | Payback |
+|---|---|---|---|---|
+| California (30% tax credit) | $2.67M | −$0.9M | 7.2% | 8.5 years |
+| Germany | €3.17M | +€2.5M | 10.0% | 7.3 years |
+| South Australia | A$8.18M | +A$21.1M | 16.5% | 5.2 years |
+
+Installed cost, the tax credit, and the services and capacity prices are the big levers; set them to
+your own numbers.
 
 ### Uploading a CSV
 
@@ -182,7 +218,7 @@ computed in milliseconds and reproducible every time.
 It is benchmarked against perfect hindsight and a rule-based bot (buy below the 3-hour average,
 sell above it), all scored with the same accounting.
 
-> Results are illustrative and cover energy arbitrage only. For real markets, annual figures
+> Results are illustrative. For real markets, annual figures
 > come from simulating all of 2025; for the simulated scenarios they scale a 48-hour window.
 > Forecast error is simulated. Past prices don't guarantee future revenue.
 
@@ -203,11 +239,14 @@ node --test tests/engine.test.js
 - The bundled data is a complete year; CSV uploads in common formats parse correctly.
 - Solar: clipping is bounded and yields are realistic; free energy is never over-used and never
   makes the best plan worse.
-- Lifetime: matches a hand-calculated NPV, IRR and payback; more cycling means earlier new cells.
+- Lifetime: matches a hand-calculated NPV, IRR and payback; more cycling means earlier new cells;
+  a tax credit lowers the upfront cost but not O&M.
 - Every AI trade can be explained, with consistent numbers.
 
-GitHub runs these on every push (see the **Actions** tab). `tools/browser_check.py` is a separate
-cross-browser check of the page itself (Chromium, Firefox, WebKit, iPad, offline).
+GitHub runs these on every push (see the **Actions** tab), together with `tools/browser_check.py`:
+the page itself in Firefox, Chromium, WebKit (Safari's engine), an iPad and offline, including
+the full-year simulation, revenue streams, lifetime view and "Why this trade?". Screenshots are
+attached to each run.
 
 ## Repository layout
 
@@ -222,6 +261,7 @@ assets/img/                 Profile photo and LinkedIn QR code
 assets/icons/, manifest.webmanifest, sw.js   Installable app + offline cache
 assets/og.png               Link-preview image
 tools/build_markets.py      Rebuilds the real-price data file
+tools/build_services.py     2025 grid-services price averages (the defaults)
 tools/build_assets.py       Rebuilds the app icons and QR code
 tools/build_og.py           Rebuilds the link-preview image
 tools/browser_check.py      Cross-browser smoke test (Chromium, Firefox, WebKit, iPad, offline)

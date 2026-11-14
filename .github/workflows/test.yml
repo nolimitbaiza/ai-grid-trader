@@ -32,3 +32,32 @@ jobs:
 
       - name: Python syntax (tools and Streamlit app)
         run: python -m py_compile tools/*.py streamlit_app/app.py
+
+  browsers:
+    # The page itself in Firefox, Chromium and WebKit (Safari's engine), plus an iPad and offline.
+    # See tools/browser_check.py. Screenshots are kept as a downloadable artifact.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Playwright browsers
+        run: |
+          pip install playwright
+          python -m playwright install --with-deps chromium firefox webkit
+
+      - name: Browser checks
+        run: |
+          python -m http.server 8600 > /dev/null 2>&1 &
+          sleep 2
+          python tools/browser_check.py http://localhost:8600/ shots firefox,chromium,webkit,ipad,offline
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-screenshots
+          path: shots/

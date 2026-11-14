@@ -43,44 +43,75 @@
   const CONTROLS = [
     { key: "cap",   label: "Battery size",          min: 10,  max: 500,   step: 10,  fmt: (v) => `${v} MWh`, main: true },
     { key: "pw",    label: "Power rating",          min: 5,   max: 200,   step: 5,   fmt: (v) => `${v} MW`, main: true },
-    { key: "wear",  label: "Wear cost per cycle",   min: 0,   max: 20000, step: 250, fmt: (v) => money(v), main: true },
+    { key: "wear",  label: "Wear cost per cycle",   min: 0,   max: 20000, step: 50,  fmt: (v) => money(v), main: true },
     { key: "fe",    label: "Forecast error",        min: 0,   max: 40,    step: 5,   fmt: (v) => (v === 0 ? "none" : `±${v}%`), main: true },
     { key: "vol",   label: "Price volatility",      min: 0,   max: 15,    step: 0.5, fmt: (v) => `±${CUR}${v}/MWh`, simOnly: true },
     { key: "eff",   label: "Round-trip efficiency", min: 70,  max: 98,    step: 1,   fmt: (v) => `${v}%` },
     { key: "frag",  label: "Micro-cycling penalty", min: 0,   max: 2000,  step: 50,  fmt: (v) => `${money(v)} / run` },
-    { key: "capex", label: "Installed cost",        min: 100, max: 600,   step: 25,  fmt: (v) => `${CUR}${v}/kWh` },
+    { key: "capex", label: "Installed cost",        min: 50,  max: 600,   step: 5,   fmt: (v) => `${CUR}${v}/kWh` },
+    { key: "itc",   label: "Tax credit on installed cost", min: 0, max: 50, step: 5,  fmt: (v) => (v ? `${v}%` : "none") },
     { key: "lo",    label: "Lowest charge level",   min: 0,   max: 45,    step: 5,   fmt: (v) => `${v}%` },
     { key: "hi",    label: "Highest charge level",  min: 55,  max: 100,   step: 5,   fmt: (v) => `${v}%` },
     // Revenue streams
     { key: "res",   label: "Power reserved for grid services", min: 0, max: 50, step: 5, fmt: (v) => (v ? `${v}%` : "none"), group: "stack" },
-    { key: "svc",   label: "Grid services price",   min: 0,   max: 40,    step: 1,   fmt: (v) => `${CUR}${v} per MW per hour`, group: "stack" },
+    { key: "svc",   label: "Grid services price",   min: 0,   max: 40,    step: 0.1,  fmt: (v) => `${CUR}${v} per MW per hour`, group: "stack" },
     { key: "capp",  label: "Capacity payment",      min: 0,   max: 200,   step: 5,   fmt: (v) => (v ? `${CUR}${v} per kW per year` : "none"), group: "stack" },
     { key: "solar", label: "Co-located solar",      min: 0,   max: 500,   step: 10,  fmt: (v) => (v ? `${v} MW of panels` : "none"), group: "stack" },
     // Battery lifetime
     { key: "life",  label: "Project life",          min: 10,  max: 20,    step: 1,   fmt: (v) => `${v} years`, group: "life" },
     { key: "disc",  label: "Discount rate",         min: 0,   max: 15,    step: 0.5, fmt: (v) => `${v}%`, group: "life" },
     { key: "clife", label: "Cycle life (to 80% health)", min: 2000, max: 12000, step: 500, fmt: (v) => `${v.toLocaleString("en-US")} cycles`, group: "life" },
-    { key: "aug",   label: "Cost of new cells",     min: 50,  max: 400,   step: 10,  fmt: (v) => `${CUR}${v}/kWh`, group: "life" },
+    { key: "aug",   label: "Cost of new cells",     min: 30,  max: 400,   step: 5,   fmt: (v) => `${CUR}${v}/kWh`, group: "life" },
   ];
 
-  // Per-market starting points for the revenue streams. These are rough, illustrative levels, not
-  // market data: California pays for capacity (resource adequacy); Germany and Australia's NEM
-  // do not. Grid-services prices vary a lot by product and year; visitors should set their own.
-  const STREAM_DEFAULTS = {
-    sim:    { res: 20, svc: 8, capp: 40 },
-    caiso:  { res: 20, svc: 8, capp: 60 },
-    de:     { res: 20, svc: 8, capp: 0 },
-    sa:     { res: 0,  svc: 4, capp: 0 },
-    upload: { res: 0,  svc: 0, capp: 0 },
+  // Per-market starting points. Costs are 2025 benchmarks for a utility-scale 4-hour battery,
+  // all-in (equipment, installation and grid connection), in the market's currency:
+  //   California: BNEF 2025 US turnkey average ($219/kWh) + ~$60/kWh installation and grid connection
+  //               (Ember, 2025); 30% federal investment tax credit (IRC §48E, kept for storage in 2025).
+  //   Germany:    BNEF 2025 Europe turnkey ($177/kWh ≈ €155) + ~€50/kWh installation and grid connection.
+  //   S Australia: CSIRO GenCost 2025-26, 4-hour battery, A$385/kWh total (A$265 battery + A$120 balance of plant).
+  // New cells (augmentation) cost the battery part only. The agent's wear price defaults to the
+  // physical wear these imply (see impliedWear). Grid-services prices are 2025 averages of real
+  // market results (tools/build_services.py); capacity payments are illustrative.
+  // Where each real market's defaults come from (shown on the page and in the business case).
+  const MARKET_INFO = {
+    caiso: {
+      svc: "California's 2025 day-ahead average for regulation up plus regulation down: $7.2 per MW per hour (CAISO OASIS; mileage payments not included)",
+      cost: "$280/kWh all-in: BloombergNEF's 2025 US turnkey average ($219/kWh) plus about $60/kWh for installation and grid connection (Ember, 2025)",
+      itc: "the US federal investment tax credit for storage, IRC §48E",
+    },
+    de: {
+      svc: "Germany's 2025 average FCR (primary frequency reserve) price: €15.2 per MW per hour (regelleistung.net). aFRR paid more on average in 2025 (about €33.6 per MW per hour for up plus down) but is less predictable",
+      cost: "€205/kWh all-in: BloombergNEF's 2025 Europe turnkey average ($177/kWh, about €155) plus about €50/kWh for installation and grid connection",
+    },
+    sa: {
+      svc: "South Australia's 2025 average for the six contingency FCAS markets combined (raise and lower, 6 s / 60 s / 5 min): A$5.6 per MW per hour (AEMO). Power is not reserved by default because trading pays far more here",
+      cost: "A$385/kWh all-in: CSIRO GenCost 2025-26, 4-hour battery (A$265 battery + A$120 balance of plant)",
+    },
   };
-  const streamDefaults = (key) => STREAM_DEFAULTS[SIM[key] ? "sim" : key] || STREAM_DEFAULTS.upload;
+
+  const MARKET_DEFAULTS = {
+    sim:    { capex: 250, aug: 150, itc: 0,  res: 20, svc: 8,  capp: 40 },
+    caiso:  { capex: 280, aug: 150, itc: 30, res: 20, svc: 7.2, capp: 60 },
+    de:     { capex: 205, aug: 120, itc: 0,  res: 20, svc: 15.2, capp: 0 },
+    sa:     { capex: 385, aug: 265, itc: 0,  res: 0,  svc: 5.6, capp: 0 },
+    upload: { capex: 250, aug: 150, itc: 0,  res: 0,  svc: 0,  capp: 0 },
+  };
+  // Physical wear per full cycle implied by the lifetime assumptions: new cells for the 20% of
+  // capacity a cycle-life's worth of cycles uses up.
+  const wearFor = (s) => (0.2 * s.cap * 1000 * s.aug) / s.clife;
+  const streamDefaults = (key, s) => {
+    const d = { ...(MARKET_DEFAULTS[SIM[key] ? "sim" : key] || MARKET_DEFAULTS.upload) };
+    d.wear = Math.round(wearFor({ ...s, ...d }) / 50) * 50;
+    return d;
+  };
   const solarSite = (key) => (SIM[key] || key === "upload" ? "sim" : key);
 
   // Fixed lifetime assumptions (shown on the page).
   const LIFE = { calendarFade: 0.01, augmentAt: 0.8, augDecline: 0.03, omPct: 0.015, warrantyCycles: 365, availability: 0.95 };
 
-  const DEFAULTS = { p: "typical", d: null, mode: "forecast", cap: 100, pw: 25, wear: 3000, fe: 20, vol: 5,
-                     eff: 88, frag: 300, capex: 300, lo: 10, hi: 90, seed: 42,
+  const DEFAULTS = { p: "typical", d: null, mode: "forecast", cap: 100, pw: 25, wear: 500, fe: 20, vol: 5,
+                     eff: 88, frag: 300, capex: 250, itc: 0, lo: 10, hi: 90, seed: 42,
                      res: 20, svc: 8, capp: 40, solar: 0, life: 15, disc: 8, clife: 6000, aug: 150 };
 
   // ------------------------------------------------------------------------------------
@@ -129,7 +160,9 @@
     const free = state.solar > 0 ? E.solarClipping(mk.startMs, N, solarSite(state.p), state.solar, 1 + (state.d | 0)).free : null;
     const w = E.runWindow(mk.prices, tradingBattery(state), { mode: state.mode, fe: state.fe, seed: state.seed, free });
     const ms = performance.now() - t0;
-    const capex = state.cap * 1000 * state.capex;
+    // Upfront cost net of any investment tax credit.
+    const capexGross = state.cap * 1000 * state.capex;
+    const capex = capexGross * (1 - state.itc / 100);
     // Annual figures: the full-year simulation when it's available for this market, otherwise
     // (simulated markets) the 48-hour result scaled to a year.
     const year = mk.real ? annualCache.get(annualKey(state)) || null : null;
@@ -137,7 +170,7 @@
     const r = {
       mk, X, XEND: fmtNaive(mk.startMs + N * STEP_MS), prices: mk.prices, ms, w,
       ai: w.ai, hind: w.hind, bot: w.bot, forecast: w.forecast, useForecast: w.useForecast,
-      capex, year, captured: w.hind.net > 1 ? (w.ai.net / w.hind.net) * 100 : null,
+      capex, capexGross, year, captured: w.hind.net > 1 ? (w.ai.net / w.hind.net) * 100 : null,
     };
     // Annual figures use every revenue stream: energy trading (full-year simulation when available,
     // otherwise the 48 hours scaled up) plus grid services and capacity payments.
@@ -244,7 +277,7 @@
     const p = params.get("p");
     if (SIM[p] || REAL[p]) s.p = p;
     if (SIM[s.p]) { s.vol = SIM[s.p].volatility; s.seed = SIM[s.p].seed; }
-    Object.assign(s, streamDefaults(s.p));
+    Object.assign(s, streamDefaults(s.p, s));
     if (params.get("mode") === "hindsight") s.mode = "hindsight";
     for (const c of CONTROLS) {
       const v = parseFloat(params.get(c.key));
@@ -589,7 +622,9 @@
     const solarTxt = state.solar > 0
       ? ` Solar: ${state.solar} MW of panels on a ${(state.solar / E.DC_AC_RATIO).toFixed(0)} MW inverter (simulated output typical for the region, not measured). The battery stores the midday output the inverter can't export, for free; on its own that adds little, since the main benefits of pairing with solar (shared grid connection, tax credits) aren't modelled.`
       : "";
-    $("stack-source").textContent = "Grid-services and capacity prices are adjustable assumptions, not market data: the defaults are rough, illustrative levels for each market. California pays for capacity (resource adequacy); Germany and Australia's NEM do not. Power kept back for grid services is not available for trading, and the simulations reflect that." + solarTxt;
+    const info = MARKET_INFO[state.p];
+    const svcTxt = info ? `Grid-services price: ${info.svc}.` : "Grid-services price: an illustrative assumption for this market.";
+    $("stack-source").textContent = `${svcTxt} Capacity payments are an illustrative assumption: California pays for capacity through resource adequacy contracts, whose prices vary widely; Germany and Australia's NEM have no capacity payment. Power kept back for grid services is not available for trading, and the simulations reflect that.` + solarTxt;
   }
 
   // ------------------------------------------------------------------------------------
@@ -598,7 +633,7 @@
   function lifeInputs(r, who) {
     const st = r.stack;
     return {
-      years: state.life, capex: r.capex, capKWh: state.cap * 1000,
+      years: state.life, capex: r.capex, omBase: r.capexGross, capKWh: state.cap * 1000,
       trading: who === "bot" ? st.botGross : st.energyGross,
       cyclesPerYear: who === "bot" ? st.botCycles : st.cycles,
       other: st.services + st.capacity,
@@ -606,9 +641,7 @@
       augDecline: LIFE.augDecline, omPct: LIFE.omPct, discount: state.disc / 100, warrantyCycles: LIFE.warrantyCycles,
     };
   }
-  // Physical wear per full cycle implied by the lifetime assumptions: new cells for the 20% of
-  // capacity a cycle-life's worth of cycles uses up.
-  const impliedWear = () => (0.2 * state.cap * 1000 * state.aug) / state.clife;
+  const impliedWear = () => wearFor(state);
 
   function renderLifetime(r) {
     const sec = $("lifetime");
@@ -634,12 +667,12 @@
       + (bot.augTotal > ai.augTotal ? `, costing ${money(bot.augTotal - ai.augTotal)} more in replacement cells.` : ".");
     const iw = impliedWear();
     text += ` These assumptions put physical wear at about <b>${money(iw)} per full cycle</b>; the agent currently prices it at ${money(state.wear)}.`
-      + (Math.abs(iw - state.wear) > 250 ? ` <button type="button" class="link-btn" id="use-wear">Use ${money(Math.round(iw / 250) * 250)}</button>` : "");
+      + (Math.abs(iw - state.wear) >= 50 ? ` <button type="button" class="link-btn" id="use-wear">Use ${money(Math.round(iw / 50) * 50)}</button>` : "");
     $("life-insight").innerHTML = text;
     const useBtn = $("use-wear");
-    if (useBtn) useBtn.onclick = () => { state.wear = Math.min(20000, Math.max(0, Math.round(iw / 250) * 250)); syncControls(); scheduleRender(); toast("Wear price updated: the AI re-plans"); };
+    if (useBtn) useBtn.onclick = () => { state.wear = Math.min(20000, Math.max(0, Math.round(iw / 50) * 50)); syncControls(); scheduleRender(); toast("Wear price updated: the AI re-plans"); };
 
-    $("life-assumptions").textContent = `Assumptions: battery health falls 20% over the cycle life plus ${LIFE.calendarFade * 100}% a year with age; when it drops below ${LIFE.augmentAt * 100}%, new cells restore it to 100% at the cost above, getting ${LIFE.augDecline * 100}% cheaper each year; operation and maintenance ${LIFE.omPct * 100}% of the installed cost a year; trading revenue scales with battery health; no tax, financing or residual value.`;
+    $("life-assumptions").textContent = `Assumptions: battery health falls 20% over the cycle life plus ${LIFE.calendarFade * 100}% a year with age; when it drops below ${LIFE.augmentAt * 100}%, new cells restore it to 100% at the cost above, getting ${LIFE.augDecline * 100}% cheaper each year; operation and maintenance ${LIFE.omPct * 100}% of the installed cost a year; trading revenue scales with battery health; ${MARKET_INFO[state.p] ? `default installed cost ${MARKET_INFO[state.p].cost}; ` : ""}${state.itc ? `a ${state.itc}% investment tax credit${MARKET_INFO[state.p] && MARKET_INFO[state.p].itc ? ` (${MARKET_INFO[state.p].itc})` : ""} reduces the upfront cost; no other tax` : "no tax"}, financing or residual value.`;
     renderLifeCharts(r, ai, bot, palette(), "chart-health", "chart-cash");
   }
 
@@ -854,7 +887,7 @@
     state.p = key;
     state.d = SIM[key] ? 0 : defaultDay(key);
     if (SIM[key]) { state.seed = SIM[key].seed; state.vol = SIM[key].volatility; }
-    Object.assign(state, streamDefaults(key));
+    Object.assign(state, streamDefaults(key, state));
     syncControls();
     scheduleRender();
   }
@@ -926,8 +959,11 @@
     document.documentElement.setAttribute("data-theme", next);
     try { localStorage.setItem("agt-theme", next); } catch (e) { /* storage unavailable: still switches */ }
     updateThemeButton();
-    if (kiosk.on) renderMainChart(last, palette(), kiosk.t, "chart-main");
-    else scheduleRender();
+    // Let the browser paint the new colours first, then redraw the charts (that can take a moment).
+    requestAnimationFrame(() => setTimeout(() => {
+      if (kiosk.on) renderMainChart(last, palette(), kiosk.t, "chart-main");
+      else scheduleRender();
+    }, 0));
   }
 
   // ------------------------------------------------------------------------------------
@@ -1081,7 +1117,8 @@
       ["Round-trip efficiency", `${state.eff}%`],
       ["Operating charge window", `${state.lo}% – ${state.hi}%`],
       ["Wear cost per full cycle", money(state.wear)],
-      ["Installed cost", `${CUR}${state.capex}/kWh (${money(r.capex)} total)`],
+      ["Installed cost", `${CUR}${state.capex}/kWh (${money(r.capexGross)} total)`],
+      ...(state.itc ? [["After tax credit", `${state.itc}% credit: ${money(r.capex)} net`]] : []),
     ].map(([a, b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join("");
     const contactLine = [f.author, f.contact].filter(Boolean).map(esc).join(" · ");
     let streamsHtml = "";
@@ -1145,7 +1182,7 @@
       </tbody></table>
       <ul class="rp-notes">
         <li>${annualNote}</li>
-        <li>${r.stack && (r.stack.services || r.stack.capacity) ? "Grid-services and capacity prices are assumptions entered in the demo, not market data." : "Energy arbitrage only; grid services and capacity payments are not included."} Lifetime: health falls 20% over ${state.clife.toLocaleString("en-US")} cycles plus 1% a year; new cells at ${CUR}${state.aug}/kWh below 80% health; O&amp;M 1.5% of installed cost a year; no tax or financing.</li>
+        <li>${r.stack && (r.stack.services || r.stack.capacity) ? `Grid services at ${CUR}${state.svc} per MW per hour${MARKET_INFO[state.p] && state.svc === MARKET_DEFAULTS[state.p].svc ? " (2025 market average)" : ""}; capacity payments are an assumption.` : "Energy arbitrage only; grid services and capacity payments are not included."}${MARKET_INFO[state.p] && state.capex === MARKET_DEFAULTS[state.p].capex ? ` Installed cost: ${esc(MARKET_INFO[state.p].cost)}.` : ""} Lifetime: health falls 20% over ${state.clife.toLocaleString("en-US")} cycles plus 1% a year; new cells at ${CUR}${state.aug}/kWh below 80% health; O&amp;M 1.5% of installed cost a year; ${state.itc ? `${state.itc}% investment tax credit on the installed cost; no other tax` : "no tax"} or financing.</li>
         <li>Battery wear is charged at the stated cost per full cycle. Forecast error is simulated on top of actual prices.</li>
         <li>Illustrative estimate, not a financial forecast or investment advice.</li>
       </ul>

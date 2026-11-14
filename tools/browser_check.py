@@ -41,10 +41,28 @@ def run(pw, label, browser_type, **ctx):
     check("page renders 5 headline numbers", len(kpis) == 5 and all(kpis), " | ".join(kpis))
     check("main chart drawn", page.locator("#chart-main .main-svg").count() > 0)
 
+    pts = page.locator("#chart-main .scatterlayer .trace .points path")
+    if pts.count():
+        pts.nth(min(3, pts.count() - 1)).click(force=True)
+        page.wait_for_timeout(400)
+    check("clicking a trade opens 'Why this trade?'", page.is_visible("#explain") and "MW" in page.inner_text("#explain-body"))
+
     page.click(".chip[data-key=de]")
     page.wait_for_timeout(400)
     check("real market (Germany) loads", "€" in page.locator("#kpis .value").first.inner_text())
     check("source line shows data provenance", "SMARD" in page.inner_text("#source"))
+    try:
+        page.wait_for_function("!document.getElementById('stack').classList.contains('pending')"
+                               " && document.getElementById('life-kpis').children.length === 4", timeout=180000)
+        ok = True
+    except Exception:
+        ok = False
+    check("full-year simulation finishes (revenue streams + lifetime)", ok)
+    if ok:
+        check("revenue streams total shown", "Total per year" in page.inner_text("#stack-table"))
+        life = page.locator("#life-kpis .value").all_inner_texts()
+        check("lifetime figures shown", len(life) == 4 and all(life), " | ".join(life))
+        check("lifetime charts drawn", page.locator("#chart-health .main-svg").count() > 0 and page.locator("#chart-cash .main-svg").count() > 0)
 
     page.click(".seg button[data-mode=hindsight]")
     page.wait_for_timeout(300)
@@ -53,7 +71,10 @@ def run(pw, label, browser_type, **ctx):
 
     before = page.evaluate("getComputedStyle(document.body).backgroundColor")
     page.click("#btn-theme")
-    page.wait_for_timeout(400)
+    try:   # the colour change is a short CSS transition
+        page.wait_for_function(f"getComputedStyle(document.body).backgroundColor !== '{before}'", timeout=3000)
+    except Exception:
+        pass
     after = page.evaluate("getComputedStyle(document.body).backgroundColor")
     check("light/dark switch changes theme", before != after, f"{before} -> {after}")
 
