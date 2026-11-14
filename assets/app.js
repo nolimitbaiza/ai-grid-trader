@@ -324,7 +324,7 @@
   function settle(prices, run, b, g, meanP) {
     const eta = Math.sqrt(b.eff / 100);
     const wearPerMWh = b.wear / (2 * b.cap);
-    const modes = new Int8Array(N), cum = new Float64Array(N);
+    const modes = new Int8Array(N), cum = new Float64Array(N), cumCycles = new Float64Array(N);
     let cash = 0, wear = 0, throughput = 0, running = 0, runs = 0;
     for (let t = 0; t < N; t++) {
       const e = run.moves[t];
@@ -333,6 +333,7 @@
       cash += c; wear += w; throughput += Math.abs(e);
       running += c - w;
       cum[t] = running;
+      cumCycles[t] = throughput / (2 * b.cap);
       modes[t] = e > 1e-9 ? CHARGE : e < -1e-9 ? DISCHARGE : IDLE;
       if (modes[t] !== IDLE && modes[t] !== (t ? modes[t - 1] : IDLE)) runs++;
     }
@@ -341,7 +342,7 @@
     cum[N - 1] += inventory;
     const revenue = cash + inventory;
     return {
-      moves: run.moves, modes, cum, revenue, wear, net: revenue - wear, runs,
+      moves: run.moves, modes, cum, cumCycles, revenue, wear, net: revenue - wear, runs,
       cycles: throughput / (2 * b.cap),
       socPct: Array.from(run.soc, (v) => (v / b.cap) * 100),
     };
@@ -595,8 +596,20 @@
     Plotly.react("chart-cum", traces, layout, PLOT_CONFIG);
   }
 
-  function kpiList(r) {
+  // Headline numbers. During an auto-play replay (t < N) they show the running totals so far.
+  function kpiList(r, t = N) {
     const { ai, bot, hind } = r;
+    if (t < N) {
+      const i = Math.max(0, t - 1);
+      const net = t ? ai.cum[i] : 0, botNet = t ? bot.cum[i] : 0, up = net - botNet;
+      return [
+        { label: "Net profit so far", value: money(net), sub: "after battery wear", cls: net < 0 ? "neg" : "" },
+        { label: "vs. rule-based bot so far", value: signedMoney(up), sub: `bot: ${money(botNet)}`, cls: up >= 0 ? "pos" : "neg" },
+        { label: "Of hindsight maximum", value: "…", sub: "after 48 hours" },
+        { label: "Battery cycles so far", value: (t ? ai.cumCycles[i] : 0).toFixed(2), sub: `bot: ${(t ? bot.cumCycles[i] : 0).toFixed(2)}` },
+        { label: "Estimated annual ROI", value: "…", sub: "after 48 hours" },
+      ];
+    }
     const uplift = ai.net - bot.net;
     const payback = Number.isFinite(r.payback) ? `${r.payback.toFixed(1)}-year payback` : "no payback at these settings";
     const captured = r.captured == null ? "—" : `${Math.round(r.captured)}%`;
@@ -610,8 +623,8 @@
     ];
   }
 
-  function renderKpis(r) {
-    $("kpis").innerHTML = kpiList(r).map((k) => `
+  function renderKpis(r, t = N) {
+    $("kpis").innerHTML = kpiList(r, t).map((k) => `
       <div class="kpi">
         <div class="label">${k.label}</div>
         <div class="value ${k.cls || ""}">${k.value}</div>
@@ -690,7 +703,7 @@
     const r = simulate(state);
     last = r;
     const c = palette();
-    renderKpis(r);
+    renderKpis(r, upto);
     renderMainChart(r, c, upto, "chart-main");
     renderInsight(r);
     $("source").textContent = sourceText(r);
@@ -819,9 +832,16 @@
     }
   }
 
+  // Full screen, including Safari/iPadOS (webkit-prefixed API). iPhone has none: the button hides.
+  const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement;
+  const fsRequest = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen;
   function togglePresent() {
-    if (document.fullscreenElement) document.exitFullscreen();
-    else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+    if (fsElement()) {
+      (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    } else if (fsRequest) {
+      const p = fsRequest.call(document.documentElement);
+      if (p && p.catch) p.catch(() => {});
+    }
   }
 
   // ------------------------------------------------------------------------------------
@@ -853,12 +873,10 @@
 
   function updateBanner(r, t) {
     const at = r.X[Math.max(0, t - 1)];
-    const profit = t > 0 ? r.ai.cum[t - 1] : 0;
-    $("kiosk-banner").innerHTML = `
+    $("kb-status").innerHTML = `
       <span class="kb-live"><span class="live"></span>Auto-play</span>
       <span class="kb-market">${esc(r.mk.label)} · ${r.mk.real ? "real prices" : "simulated"}</span>
-      <span class="kb-time">${fmtClock(parseNaive(at))}</span>
-      <span class="kb-profit">Profit so far <b>${money(profit)}</b></span>
+      <span class="kb-time">${t >= N ? "48 hours done" : fmtClock(parseNaive(at))}</span>
       <span class="kb-hint">Tap anywhere to explore</span>`;
   }
 
@@ -878,6 +896,7 @@
       if (!kiosk.on) return;
       kiosk.t = Math.min(N, kiosk.t + 2);
       renderMainChart(r, palette(), kiosk.t, "chart-main");
+      renderKpis(r, kiosk.t);
       updateBanner(r, kiosk.t);
       kiosk.timer = setTimeout(kiosk.t < N ? tick : playNextMarket, kiosk.t < N ? 90 : 6000);
     };
@@ -913,12 +932,15 @@
   // 12. Business case PDF: fills a print-only page, then opens the print dialog
   // ------------------------------------------------------------------------------------
   const FIELDS = ["client", "project", "author", "contact"];
+  // Built by / contact. The address is assembled at runtime to keep it away from simple scrapers.
+  const OWNER = { name: "Baizak Isaev", email: ["baizakisaev", "gmail.com"].join("@"), linkedin: "linkedin.com/in/baizakisaev" };
 
   function openReportDialog() {
     const dlg = $("report-dialog");
     let saved = {};
     try { saved = JSON.parse(localStorage.getItem("agt-report") || "{}"); } catch (e) { saved = {}; }
-    for (const f of ["author", "contact"]) if (saved[f] && !dlg.querySelector(`[name=${f}]`).value) dlg.querySelector(`[name=${f}]`).value = saved[f];
+    const defaults = { author: saved.author || OWNER.name, contact: saved.contact || OWNER.email };
+    for (const f of ["author", "contact"]) if (!dlg.querySelector(`[name=${f}]`).value) dlg.querySelector(`[name=${f}]`).value = defaults[f];
     if (typeof dlg.showModal === "function") dlg.showModal();
     else createReport({});
   }
@@ -1006,7 +1028,7 @@
         <li>Battery wear is charged at the stated cost per full cycle. Forecast error is simulated on top of actual prices.</li>
         <li>Illustrative estimate, not a financial forecast or investment advice.</li>
       </ul>
-      <div class="rp-foot"><span>Generated with AI Grid Trader</span><span>${esc(location.origin + location.pathname)}</span></div>`;
+      <div class="rp-foot"><span>AI Grid Trader by ${OWNER.name} · ${OWNER.linkedin}</span><span>${esc(location.origin + location.pathname)}</span></div>`;
   }
 
   // ------------------------------------------------------------------------------------
@@ -1019,6 +1041,14 @@
     syncControls();
     updateThemeButton();
     render();
+
+    $("email-link").href = `mailto:${OWNER.email}?subject=${encodeURIComponent("AI Grid Trader demo")}`;
+    $("email-link").title = OWNER.email;
+    if (!fsRequest) $("btn-present").hidden = true;
+    // Offline support: cache the app after the first visit (only over http/https, not file://).
+    if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    }
 
     $("btn-share").addEventListener("click", share);
     $("btn-present").addEventListener("click", togglePresent);

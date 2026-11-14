@@ -226,6 +226,26 @@ input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px 
   color: var(--ink) !important; background: var(--soft); padding: 10px 14px; border-radius: 10px; display: inline-block;
 }
 
+/* ---------- Avatar (photo with initials fallback) ---------- */
+.avatar {
+  position: relative; display: inline-grid; place-items: center; flex: none; overflow: hidden;
+  border-radius: 50%; background: var(--soft); border: 1px solid var(--line);
+  color: var(--muted); font-weight: 600; letter-spacing: .02em; text-decoration: none;
+}
+.avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.avatar-sm { width: 34px; height: 34px; font-size: 12px; margin-left: 2px; }
+.avatar-sm:hover { border-color: var(--muted); }
+.avatar-lg { width: 72px; height: 72px; font-size: 22px; }
+
+/* ---------- Contact card ---------- */
+.contact { display: flex; align-items: center; gap: 20px 24px; flex-wrap: wrap; margin: 0 0 56px; scroll-margin-top: 24px; }
+.contact-text { flex: 1 1 280px; min-width: 0; }
+.contact-text h2 { font-size: 20px; margin: 0 0 4px; }
+.contact-text .note { margin: 0; }
+.kicker { margin: 0 0 2px; font-size: 12px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.contact-links { display: flex; gap: 8px; flex-wrap: wrap; }
+.contact-links .btn { padding: 9px 16px; font-size: 13.5px; text-decoration: none; }
+
 /* ---------- Footer & toast ---------- */
 footer {
   display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
@@ -262,14 +282,18 @@ body.kiosk .kiosk-banner {
   display: flex; align-items: center; gap: 10px 20px; flex-wrap: wrap;
   margin: -4px 0 20px; padding-bottom: 16px; border-bottom: 1px solid var(--line); font-size: 14px;
 }
+.kb-status { display: flex; align-items: center; gap: 6px 20px; flex-wrap: wrap; flex: 1 1 300px; }
 .kb-live { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
 .kb-market { font-weight: 600; }
 .kb-time { color: var(--muted); font-variant-numeric: tabular-nums; }
-.kb-profit { font-variant-numeric: tabular-nums; }
-.kb-hint { margin-left: auto; color: var(--muted); font-size: 13px; }
+.kb-hint { color: var(--muted); font-size: 13px; }
+.kb-connect { display: flex; align-items: center; gap: 12px; margin-left: auto; font-size: 13px; line-height: 1.35; }
+.kb-connect img { background: #fff; border-radius: 8px; padding: 4px; border: 1px solid var(--line); }
+.kb-connect span { color: var(--muted); }
 /* Full-screen layout: header, banner, KPIs and a chart that fills the rest of the window. */
 body.kiosk .intro, body.kiosk .markets, body.kiosk .controls, body.kiosk .split, body.kiosk .how,
-body.kiosk .method, body.kiosk footer, body.kiosk .seg, body.kiosk .insight, body.kiosk .source { display: none !important; }
+body.kiosk .method, body.kiosk footer, body.kiosk .seg, body.kiosk .insight, body.kiosk .source,
+body.kiosk .contact { display: none !important; }
 body.kiosk { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
 body.kiosk .top, body.kiosk main { width: 100%; }
 body.kiosk main { flex: 1; display: flex; flex-direction: column; padding-bottom: 16px; }
@@ -278,7 +302,8 @@ body.kiosk .chart { flex: 1 1 auto; height: auto; min-height: 320px; }
 body.kiosk #btn-play { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 
 /* ---------- Embed mode (?embed=1): just the demo, for iframes ---------- */
-body.embed .top, body.embed .intro, body.embed .how, body.embed .method, body.embed footer { display: none; }
+body.embed .top, body.embed .intro, body.embed .how, body.embed .method, body.embed footer,
+body.embed .contact { display: none; }
 body.embed main { padding-top: 16px; padding-bottom: 16px; }
 body.embed { background: transparent; }
 
@@ -345,7 +370,10 @@ body.embed { background: transparent; }
   .chips-label { min-width: 0; width: 100%; }
   .brand-name { display: none; }
   .seg-label { display: none; }
-  .kb-hint { margin-left: 0; }
+  .kb-connect { margin-left: 0; }
+  .kb-connect img { width: 52px; height: 52px; }
+  .actions { gap: 4px; }
+  .btn-icon, .btn { padding: 7px 9px; }
 }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }

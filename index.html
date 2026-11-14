@@ -5,8 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AI Grid Trader</title>
   <meta name="description" content="Live demo: an AI agent that trades a grid-scale battery for profit while protecting its lifespan.">
-  <meta property="og:title" content="AI Grid Trader">
-  <meta property="og:description" content="An AI that trades a grid battery, and protects it. Interactive live demo on real market prices.">
+  <meta name="author" content="Baizak Isaev">
+  <!-- Link previews (LinkedIn, Slack, email, X) -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://nolimitbaiza.github.io/ai-grid-trader/">
+  <meta property="og:title" content="AI Grid Trader · live demo by Baizak Isaev">
+  <meta property="og:description" content="An AI that trades a grid battery, and protects it. Try it on real market prices, right in your browser.">
+  <meta property="og:image" content="https://nolimitbaiza.github.io/ai-grid-trader/assets/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="AI Grid Trader: a battery trading chart with buy and sell decisions">
+  <meta name="twitter:card" content="summary_large_image">
+  <!-- Installable app (works offline after the first visit) -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#0c0a09">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Grid Trader">
+  <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230c0a09'/%3E%3Cpath d='M18 5 9 18h6l-2 9 9-13h-6z' fill='%23fff'/%3E%3C/svg%3E">
   <!-- Apply the saved light/dark choice before first paint (no flash). -->
   <script>try{var t=localStorage.getItem("agt-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
@@ -38,6 +54,10 @@
         <span class="lbl">Present</span>
       </button>
       <button class="btn btn-icon" id="btn-theme" type="button" aria-label="Switch theme" title="Switch light / dark (T)"></button>
+      <a class="avatar avatar-sm" href="#contact" title="Built by Baizak Isaev: get in touch">
+        <span aria-hidden="true">BI</span>
+        <img src="assets/img/profile.jpg" alt="Baizak Isaev" onerror="this.remove()">
+      </a>
     </div>
   </header>
 
@@ -73,7 +93,13 @@
     </div>
 
     <section class="card main-card">
-      <div class="kiosk-banner" id="kiosk-banner" aria-live="off"></div>
+      <div class="kiosk-banner" aria-live="off">
+        <div class="kb-status" id="kb-status"></div>
+        <div class="kb-connect">
+          <img src="assets/img/qr-linkedin.svg" width="64" height="64" alt="QR code for Baizak Isaev's LinkedIn">
+          <div><b>Baizak Isaev</b><br><span>Scan to connect on LinkedIn</span></div>
+        </div>
+      </div>
       <div class="kpis" id="kpis"></div>
       <div class="chart-head">
         <div class="legend" aria-hidden="true">
@@ -150,10 +176,36 @@
         re-plans the rest of the horizon, and executes the next hour. <b>Perfect hindsight</b> plans on the actual
         prices and shows the theoretical maximum.</p>
     </details>
+
+    <section class="card contact" id="contact">
+      <div class="avatar avatar-lg">
+        <span aria-hidden="true">BI</span>
+        <img src="assets/img/profile.jpg" alt="Baizak Isaev" onerror="this.remove()">
+      </div>
+      <div class="contact-text">
+        <p class="kicker">Built by</p>
+        <h2>Baizak Isaev</h2>
+        <p class="note">Want to see this running on your own battery and market prices? I'd be glad to walk you through it.</p>
+      </div>
+      <div class="contact-links">
+        <a class="btn btn-primary" id="email-link" href="#contact">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm0 1 8 7 8-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+          Email me
+        </a>
+        <a class="btn" href="https://www.linkedin.com/in/baizakisaev/" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9.5h4V21H3zM9.5 9.5h3.8v1.6h.06c.53-1 1.84-2.06 3.79-2.06 4.05 0 4.8 2.67 4.8 6.13V21h-4v-5.13c0-1.22-.02-2.8-1.7-2.8-1.71 0-1.97 1.33-1.97 2.71V21h-4z" fill="currentColor"/></svg>
+          LinkedIn
+        </a>
+        <a class="btn" href="https://github.com/nolimitbaiza" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.08.63-1.33-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.5 9.5 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2z" fill="currentColor"/></svg>
+          GitHub
+        </a>
+      </div>
+    </section>
   </main>
 
   <footer class="wrap">
-    <span id="footer-note">Results are illustrative and cover energy arbitrage only.</span>
+    <span>© 2026 Baizak Isaev · Results are illustrative and cover energy arbitrage only.</span>
     <span><span id="solve-time"></span> · <a href="https://github.com/nolimitbaiza/ai-grid-trader">Source on GitHub</a></span>
   </footer>
 

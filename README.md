@@ -12,13 +12,16 @@ prices from three markets, or on a price file you upload.
 The demo runs entirely in the visitor's browser: no server, no sign-up, loads in about a second
 and works on phones and tablets.
 
+Built by **Baizak Isaev** · [LinkedIn](https://www.linkedin.com/in/baizakisaev/) ·
+[GitHub](https://github.com/nolimitbaiza) · baizakisaev@gmail.com
+
 ---
 
 ## Presenting it
 
 | To… | Do this |
 |---|---|
-| Run it unattended on a booth screen | Open **https://nolimitbaiza.github.io/ai-grid-trader/?kiosk=1**. It goes full-window, the chart fills the screen, and it auto-plays every market with a live profit counter. Scrolling keeps it playing; a tap, click or key hands control to the visitor; after 60 s idle it starts again. |
+| Run it unattended on a booth screen | Open **https://nolimitbaiza.github.io/ai-grid-trader/?kiosk=1**. It goes full-window, the chart fills the screen, and it auto-plays every market while the headline numbers count up. A QR code to your LinkedIn sits in the corner. Scrolling keeps it playing; a tap, click or key hands control to the visitor; after 60 s idle it starts again. |
 | Start or stop auto-play by hand | Click **Auto-play**, or press **K** |
 | Switch market | Click a chip, or press **1–7** (four simulated, then California, Germany, South Australia) |
 | Show a different 48 hours | Click **New day** or press **N** (real markets: or pick dates from the menu) |
@@ -30,9 +33,15 @@ and works on phones and tablets.
 | Light or dark | The sun/moon button, or **T**. The choice is remembered. |
 | Full screen | **Present**, or **F** |
 
-**No Wi-Fi at the venue?** Download this repo (green **Code** button → *Download ZIP*), unzip it,
-and double-click `index.html`. Everything, including the charting library and the real market
-data, is bundled, so it runs fully offline.
+**No Wi-Fi at the venue?** Open the live demo once while you're online. After that the same link
+opens with no connection, because the browser keeps a copy. You can also install it like an app:
+the install icon in Chrome/Edge's address bar, or *Share → Add to Home Screen* on iPad/iPhone.
+As a last resort, download this repo (green **Code** button → *Download ZIP*), unzip it and
+double-click `index.html`.
+
+**Sharing the link** on LinkedIn, Slack or email shows a preview card (`assets/og.png`).
+LinkedIn caches previews; after changing the image, refresh it with the
+[LinkedIn Post Inspector](https://www.linkedin.com/post-inspector/).
 
 ## Forecast mode: the honest benchmark
 
@@ -121,9 +130,19 @@ assets/app.js               Markets, RL agent, forecast mode, benchmarks, charts
 assets/style.css            Minimal light/dark theme and the printable business case
 assets/data/markets.js      Real historical prices (15-minute)
 assets/vendor/              Plotly.js (bundled for offline use)
+assets/img/                 Profile photo and LinkedIn QR code
+assets/icons/, manifest.webmanifest, sw.js   Installable app + offline cache
+assets/og.png               Link-preview image
 tools/build_markets.py      Rebuilds the real-price data file
+tools/build_assets.py       Rebuilds the app icons and QR code
+tools/build_og.py           Rebuilds the link-preview image
+tools/browser_check.py      Cross-browser smoke test (Chromium, Firefox, WebKit, iPad, offline)
 streamlit_app/              Full analyst dashboard in Python (Streamlit)
 ```
+
+To swap the profile photo, replace `assets/img/profile.jpg` (square, about 400×400). Until it
+exists the page shows the initials "BI". After publishing changes, visitors who already opened
+the demo get the new version on their next visit.
 
 ## Analyst dashboard (Python)
 
