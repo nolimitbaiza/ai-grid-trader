@@ -872,6 +872,7 @@
     syncControls();
     kiosk.t = 0;
     const r = render(0);
+    Plotly.Plots.resize("chart-main");          // the kiosk layout gives the chart a new size
     updateBanner(r, 0);
     const tick = () => {
       if (!kiosk.on) return;
@@ -899,6 +900,7 @@
     kiosk.t = N;
     document.body.classList.remove("kiosk");
     render();
+    Plotly.Plots.resize("chart-main");
   }
 
   function armIdle() {
@@ -1050,11 +1052,15 @@
       }
     });
 
-    // Leaving kiosk: any interaction hands control back to the visitor.
-    for (const ev of ["pointerdown", "keydown", "wheel", "touchstart"]) {
+    // Leaving kiosk: a tap/click or a key hands control back to the visitor. Scrolling (wheel,
+    // touch swipe, scroll keys) does not, so people can look around while it keeps playing.
+    const SCROLL_KEYS = /^(ArrowUp|ArrowDown|PageUp|PageDown|Home|End| )$/;
+    for (const ev of ["click", "keydown", "wheel", "touchstart", "scroll"]) {
       document.addEventListener(ev, (e) => {
-        const ownToggle = (ev === "pointerdown" && e.target.closest("#btn-play")) || (ev === "keydown" && /^k$/i.test(e.key));
-        if (kiosk.on && !ownToggle) stopKiosk();
+        const exits = ev === "click" ? !e.target.closest("#btn-play")
+          : ev === "keydown" ? !/^k$/i.test(e.key) && !SCROLL_KEYS.test(e.key)
+          : false;
+        if (kiosk.on && exits) stopKiosk();
         armIdle();
       }, { capture: true, passive: true });
     }

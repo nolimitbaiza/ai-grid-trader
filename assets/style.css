@@ -267,10 +267,14 @@ body.kiosk .kiosk-banner {
 .kb-time { color: var(--muted); font-variant-numeric: tabular-nums; }
 .kb-profit { font-variant-numeric: tabular-nums; }
 .kb-hint { margin-left: auto; color: var(--muted); font-size: 13px; }
-body.kiosk .lede, body.kiosk .controls, body.kiosk .split, body.kiosk .how, body.kiosk .method,
-body.kiosk footer, body.kiosk .seg, body.kiosk .chips-tools, body.kiosk .chip-upload { display: none !important; }
-body.kiosk .intro { padding: 20px 0 18px; }
-body.kiosk .chart { height: min(52vh, 560px); }
+/* Full-screen layout: header, banner, KPIs and a chart that fills the rest of the window. */
+body.kiosk .intro, body.kiosk .markets, body.kiosk .controls, body.kiosk .split, body.kiosk .how,
+body.kiosk .method, body.kiosk footer, body.kiosk .seg, body.kiosk .insight, body.kiosk .source { display: none !important; }
+body.kiosk { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
+body.kiosk .top, body.kiosk main { width: 100%; }
+body.kiosk main { flex: 1; display: flex; flex-direction: column; padding-bottom: 16px; }
+body.kiosk .main-card { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+body.kiosk .chart { flex: 1 1 auto; height: auto; min-height: 320px; }
 body.kiosk #btn-play { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 
 /* ---------- Embed mode (?embed=1): just the demo, for iframes ---------- */

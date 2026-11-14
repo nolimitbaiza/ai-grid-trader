@@ -18,7 +18,7 @@ and works on phones and tablets.
 
 | To… | Do this |
 |---|---|
-| Run it unattended on a booth screen | Open **https://nolimitbaiza.github.io/ai-grid-trader/?kiosk=1**. It auto-plays every market, replaying the AI's trades with a live profit counter. Any touch hands control to the visitor; after 60 s idle it starts again. |
+| Run it unattended on a booth screen | Open **https://nolimitbaiza.github.io/ai-grid-trader/?kiosk=1**. It goes full-window, the chart fills the screen, and it auto-plays every market with a live profit counter. Scrolling keeps it playing; a tap, click or key hands control to the visitor; after 60 s idle it starts again. |
 | Start or stop auto-play by hand | Click **Auto-play**, or press **K** |
 | Switch market | Click a chip, or press **1–7** (four simulated, then California, Germany, South Australia) |
 | Show a different 48 hours | Click **New day** or press **N** (real markets: or pick dates from the menu) |
