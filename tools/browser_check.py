@@ -37,18 +37,18 @@ def run(pw, label, browser_type, **ctx):
     page.on("console", lambda m: m.type == "error" and "profile.jpg" not in m.text and "404" not in m.text and errors.append(m.text))
     page.goto(URL, wait_until="networkidle")
 
-    kpis = page.locator(".kpi .value").all_inner_texts()
+    kpis = page.locator("#kpis .value").all_inner_texts()
     check("page renders 5 headline numbers", len(kpis) == 5 and all(kpis), " | ".join(kpis))
     check("main chart drawn", page.locator("#chart-main .main-svg").count() > 0)
 
     page.click(".chip[data-key=de]")
     page.wait_for_timeout(400)
-    check("real market (Germany) loads", "€" in page.locator(".kpi .value").first.inner_text())
+    check("real market (Germany) loads", "€" in page.locator("#kpis .value").first.inner_text())
     check("source line shows data provenance", "SMARD" in page.inner_text("#source"))
 
     page.click(".seg button[data-mode=hindsight]")
     page.wait_for_timeout(300)
-    check("hindsight switch works", page.locator(".kpi .value").nth(2).inner_text() == "100%")
+    check("hindsight switch works", page.locator("#kpis .value").nth(2).inner_text() == "100%")
     page.click(".seg button[data-mode=forecast]")
 
     before = page.evaluate("getComputedStyle(document.body).backgroundColor")
@@ -72,7 +72,7 @@ def run(pw, label, browser_type, **ctx):
 
     page.click("#btn-play")
     page.wait_for_timeout(3500)
-    labels = page.locator(".kpi .label").all_inner_texts()
+    labels = page.locator("#kpis .label").all_inner_texts()
     check("auto-play running with live numbers", page.evaluate("document.body.classList.contains('kiosk')") and "so far" in labels[0], labels[0])
     fit = page.evaluate("""() => { const c = document.getElementById('chart-main').getBoundingClientRect();
         const s = document.querySelector('#chart-main .main-svg').getBoundingClientRect();
@@ -103,7 +103,7 @@ def offline(pw):
     context.set_offline(True)
     page.goto(URL + "?kiosk=1", wait_until="load")
     page.wait_for_timeout(1500)
-    kpis = page.locator(".kpi .value").all_inner_texts()
+    kpis = page.locator("#kpis .value").all_inner_texts()
     check("opens with no network after first visit", len(kpis) == 5 and all(kpis), " | ".join(kpis))
     browser.close()
 

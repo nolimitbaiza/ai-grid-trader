@@ -229,6 +229,49 @@ input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px 
 .annual.pending .kpis-4, .annual.pending .annual-body { opacity: .35; filter: grayscale(1); transition: opacity .2s; }
 .sw-bar { width: 10px; height: 10px; border-radius: 2px; background: var(--ink); }
 
+/* ---------- Why this trade? ---------- */
+.click-hint { margin: 2px 0 0; font-size: 12.5px; color: var(--muted); }
+.explain {
+  position: relative; margin-top: 12px; padding: 16px 18px; border-radius: 12px;
+  background: var(--soft); border: 1px solid var(--line);
+}
+.explain-close {
+  position: absolute; top: 8px; right: 10px; appearance: none; border: 0; background: none; cursor: pointer;
+  font-size: 20px; line-height: 1; color: var(--muted); padding: 4px 6px;
+}
+.explain-close:hover { color: var(--ink); }
+.explain-lead { font-size: 16px; margin: 4px 0 12px; }
+.explain-lead .muted, .muted { color: var(--muted); font-weight: 400; font-size: 13.5px; margin-left: 6px; }
+.explain-cells { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 20px; margin-bottom: 10px; }
+.explain-cells .label { font-size: 12px; color: var(--muted); }
+.explain-cells .value { font-size: 20px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.explain-cells .sub { font-size: 11.5px; color: var(--muted); }
+.explain-notes { margin: 6px 0 0; padding-left: 18px; color: var(--muted); font-size: 14px; }
+.explain-notes li { margin-bottom: 4px; }
+.explain-notes b { color: var(--ink); }
+
+/* ---------- Revenue streams ---------- */
+.stack, .lifetime { margin-top: 16px; }
+.stack-bar { display: flex; height: 14px; border-radius: 7px; overflow: hidden; gap: 2px; margin: 4px 0 18px; background: var(--soft); }
+.seg-part { min-width: 4px; }
+.stack-body { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px 40px; align-items: start; }
+.stack-table td:first-child { color: var(--ink); }
+.row-note { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.stack.pending .stack-bar, .stack.pending .stack-table, .lifetime.pending .kpis-4, .lifetime.pending .life-charts,
+.lifetime.pending .insight { opacity: .35; filter: grayscale(1); }
+
+/* ---------- Battery lifetime ---------- */
+.life-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 32px; margin-top: 8px; }
+.chart-title { font-size: 13px; font-weight: 600; margin: 4px 0 0; }
+.sw-dash-red { border-top: 2px dotted var(--discharge); height: 0; }
+.lifetime .insight { margin-bottom: 18px; }
+.link-btn {
+  appearance: none; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; margin-left: 4px;
+  color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px;
+}
+.link-btn:hover { border-color: var(--muted); }
+
 /* ---------- How it works ---------- */
 .how { display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px; padding: 64px 0 8px; }
 .how h3 { font-size: 16px; margin: 10px 0 6px; }
@@ -309,7 +352,8 @@ body.kiosk .kiosk-banner {
 /* Full-screen layout: header, banner, KPIs and a chart that fills the rest of the window. */
 body.kiosk .intro, body.kiosk .markets, body.kiosk .controls, body.kiosk .split, body.kiosk .how,
 body.kiosk .method, body.kiosk footer, body.kiosk .seg, body.kiosk .insight, body.kiosk .source,
-body.kiosk .contact, body.kiosk .annual { display: none !important; }
+body.kiosk .contact, body.kiosk .annual, body.kiosk .stack, body.kiosk .lifetime,
+body.kiosk .click-hint, body.kiosk .explain { display: none !important; }
 body.kiosk { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
 body.kiosk .top, body.kiosk main { width: 100%; }
 body.kiosk main { flex: 1; display: flex; flex-direction: column; padding-bottom: 16px; }
@@ -331,7 +375,7 @@ body.embed { background: transparent; }
   body > *:not(#report) { display: none !important; }
   #report { display: block; font-size: 9.5pt; }
   #report h3 { margin: 10px 0 4px; }
-  .rp-chart { max-height: 68mm; object-fit: contain; }
+  .rp-chart { max-height: 58mm; object-fit: contain; }
   .rp-kpis { margin: 8px 0; }
 }
 #report {
@@ -369,7 +413,8 @@ body.embed { background: transparent; }
 }
 @media (max-width: 880px) {
   .grid { grid-template-columns: repeat(2, 1fr); }
-  .split, .annual-body { grid-template-columns: 1fr; }
+  .split, .annual-body, .stack-body, .life-charts { grid-template-columns: 1fr; }
+  .explain-cells { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .kpis-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .how { grid-template-columns: 1fr; gap: 28px; padding-top: 48px; }
   .chart { height: 340px; }

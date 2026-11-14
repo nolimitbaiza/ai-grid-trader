@@ -180,3 +180,77 @@ test("CSV upload: common formats are read, bad files give clear errors", () => {
   const bare = E.parseUpload(hours(60, (h, p) => p.toFixed(1)), "bare.csv");
   assert.equal(bare.prices.length, 60 * 4, "no timestamps: assumed hourly");
 });
+
+// ---------------------------------------------------------------------------- solar + storage
+test("co-located solar: clipping is bounded, yields are realistic, free energy is never over-used", () => {
+  for (const [site, m] of Object.entries(MARKETS)) {
+    const T = m.prices.length, start = E.parseNaive(m.start);
+    const none = E.solarClipping(start, T, site, 0, 1);
+    assert.equal(none.clippedMWh, 0, `${site}: no panels, no clipping`);
+    const sc = E.solarClipping(start, T, site, 100, 1);
+    const cf = sc.producedMWh / (100 * 8760);
+    assert.ok(cf > 0.08 && cf < 0.3, `${site}: yearly capacity factor ${cf}`);
+    assert.ok(sc.clippedMWh > 0 && sc.clippedMWh < 0.1 * sc.producedMWh, `${site}: clipped ${sc.clippedMWh} of ${sc.producedMWh}`);
+  }
+  const b = DEFAULT_BATTERY, m = MARKETS.caiso, d = 180;
+  const prices = Float64Array.from(m.prices.slice(d * 96, d * 96 + E.N));
+  const free = E.solarClipping(E.parseNaive(m.start) + d * E.DAY_MS, E.N, "caiso", 300, 1).free;
+  const w = E.runWindow(prices, b, { mode: "forecast", fe: 20, seed: 4, free });
+  for (const res of [w.ai, w.hind]) {
+    for (let t = 0; t < E.N; t++) {
+      assert.ok(res.freeUsed[t] <= free[t] + 1e-9, `step ${t}: used ${res.freeUsed[t]} of ${free[t]} free`);
+      if (res.freeUsed[t] > 0) assert.ok(res.moves[t] > 0, `step ${t}: free solar only used while charging`);
+    }
+  }
+  const plain = E.runWindow(prices, b, { mode: "forecast", fe: 20, seed: 4 });
+  assert.ok(objective(w.hind, b) >= objective(plain.hind, b) - 1e-6, "free solar never makes the best plan worse");
+  assert.ok(objective(w.hind, b) >= objective(w.ai, b) - tol(prices, b), "hindsight still beats the forecast agent with solar");
+});
+
+// ---------------------------------------------------------------------------- battery lifetime
+const LIFE_BASE = { years: 15, capex: 30e6, capKWh: 1e5, trading: 3e6, cyclesPerYear: 300, other: 0, cycleLife: 6000,
+                    calendarFade: 0.01, augmentAt: 0.8, augCost: 150, augDecline: 0.03, omPct: 0.015, discount: 0.08, warrantyCycles: 365 };
+
+test("lifetime: a simple case matches hand-calculated NPV, IRR and payback", () => {
+  const o = { ...LIFE_BASE, years: 10, cyclesPerYear: 0, calendarFade: 0, omPct: 0, trading: 0, other: 5e6, capex: 30e6 };
+  const r = E.lifetime(o);
+  let npv = -30e6;
+  for (let y = 1; y <= 10; y++) npv += 5e6 / 1.08 ** y;
+  assert.ok(Math.abs(r.npv - npv) < 1, `npv ${r.npv} vs ${npv}`);
+  assert.ok(Math.abs(r.payback - 6) < 1e-9, `payback ${r.payback}`);
+  const npvAtIrr = [-30e6, ...Array(10).fill(5e6)].reduce((s, f, i) => s + f / (1 + r.irr) ** i, 0);
+  assert.ok(Math.abs(npvAtIrr) < 1e3, `NPV at IRR should be ~0, got ${npvAtIrr}`);
+  assert.equal(r.augments, 0);
+});
+
+test("lifetime: more cycling wears the battery faster and needs new cells sooner", () => {
+  const gentle = E.lifetime({ ...LIFE_BASE, cyclesPerYear: 250 });
+  const hard = E.lifetime({ ...LIFE_BASE, cyclesPerYear: 600 });
+  assert.ok(hard.augments >= gentle.augments, "more augmentations");
+  assert.ok(hard.firstAug != null && (gentle.firstAug == null || hard.firstAug < gentle.firstAug), "earlier first augmentation");
+  assert.ok(hard.augTotal > gentle.augTotal, "more spent on cells");
+  assert.equal(gentle.withinWarranty, true);
+  assert.equal(hard.withinWarranty, false);
+  for (const r of [gentle, hard]) for (const row of r.rows) {
+    assert.ok(row.healthEnd < row.healthStart, "health falls every year");
+    assert.ok(row.healthAfter >= LIFE_BASE.augmentAt - 0.2, "health stays in a sane range");
+  }
+});
+
+// ---------------------------------------------------------------------------- why this trade?
+test("every AI trade can be explained with consistent numbers", () => {
+  const b = DEFAULT_BATTERY;
+  for (const [name, prices] of windows().slice(0, 10)) {
+    for (const mode of ["forecast", "hindsight"]) {
+      const w = E.runWindow(prices, b, { mode, fe: 20, seed: 6 });
+      for (let t = 0; t < E.N; t++) {
+        const x = E.explainTrade(prices, w, b, t);
+        if (w.ai.modes[t] === E.IDLE) { assert.equal(x, null); continue; }
+        assert.equal(x.kind, w.ai.modes[t] === E.CHARGE ? "buy" : "sell", `${name} ${mode} t=${t}`);
+        assert.ok(Number.isFinite(x.price) && x.mw > 0, `${name}: price and power`);
+        if (x.kind === "buy") assert.ok(Math.abs(x.costPerStored - x.price / x.eta) < 1e-9, `${name}: cost per stored MWh`);
+        if (x.margin != null) assert.ok(Number.isFinite(x.margin), `${name}: margin`);
+      }
+    }
+  }
+});

@@ -30,6 +30,8 @@ Built by **Baizak Isaev** · [LinkedIn](https://www.linkedin.com/in/baizakisaev/
 | Leave a prospect a one-page business case | **Business case** → enter their name → *Save as PDF* in the print window |
 | Send the exact scenario you showed | **Share**: the link stores every setting |
 | Make the point about battery health | Drag **Wear cost per cycle** to $0 and watch the AI start micro-cycling |
+| Explain a decision | Click any ▲ or ▼ on the chart: **Why this trade?** shows what the AI expected, its margin after losses and wear, and what actually happened |
+| Talk about the business case beyond trading | Scroll to **Revenue streams** (grid services, capacity payments, solar) and **Battery lifetime** (15 years, new cells, warranty) |
 | Light or dark | The sun/moon button, or **T**. The choice is remembered. |
 | Full screen | **Present**, or **F** |
 
@@ -84,6 +86,50 @@ shows the seasonality. With the default 100 MWh / 25 MW battery on 2025 prices:
 
 The 48-hour chart opens on a representative window (the median price spread of the year), not a
 cherry-picked one; any other day can be picked from the date menu.
+
+## Why this trade?
+
+Click any buy (▲) or sell (▼) marker. The panel reconstructs the decision from the plan the agent
+was following at that moment (in forecast mode, its hourly re-plan and the forecast it had then):
+
+- **Buys:** the price paid, when and at what forecast price it planned to sell, the cost per stored
+  MWh after efficiency losses, battery wear, the expected margin, and what actually happened.
+- **Sells:** what the energy cost when it was bought (or, for energy already in the battery, the
+  planned cheaper refill), the margin, and whether the forecast showed better prices later.
+- What the rule-based bot did at the same moment.
+
+## Revenue streams
+
+Energy trading is only one way a battery earns. The **Revenue streams** section adds:
+
+- **Grid services:** keep part of the power back for frequency services, paid per MW per hour of
+  availability. Reserved power can't be traded, and the simulations (48 hours and full year) account
+  for that.
+- **Capacity payments:** paid per kW per year for being available at peak; counted in full for a
+  4-hour battery, proportionally less for shorter ones.
+- **Co-located solar:** panels at 1.3× their inverter rating clip on sunny middays; a DC-coupled
+  battery stores that energy for free. Solar output is *simulated* for the region (typical shape
+  and yearly yield, not measured data). Clipping alone adds little; the bigger real benefits of
+  pairing with solar (shared grid connection, tax credits) aren't modelled.
+
+**Grid-services and capacity prices are adjustable assumptions, not market data.** The defaults are
+rough illustrative levels (California pays for capacity through resource adequacy; Germany and
+Australia's NEM don't). The annual ROI shown at the top includes every stream.
+
+## Battery lifetime
+
+Years of cash flow with *physical* battery wear instead of the agent's internal wear price:
+health falls 20% over the cycle life plus 1% a year with age; below 80% health, new cells restore it
+(getting 3% cheaper each year); O&M is 1.5% of the installed cost a year; trading revenue scales
+with health. Shown for the AI and the rule-based bot side by side: lifetime value (NPV), IRR,
+payback, new cells needed, health over time, cumulative cash, and cycles per year against a typical
+365-cycle-a-year warranty. It also shows the wear cost per cycle these assumptions imply, with a
+button to set the agent's wear price to it. No tax, financing or residual value.
+
+With the defaults (100 MWh / 25 MW at 300 per kWh installed, 2025 prices) the 15-year picture is
+honest rather than rosy: South Australia pays back in about 4 years; California and Germany don't
+pay back within 15 years at that installed cost. Installed cost and the services and capacity prices
+are the big levers; set them to your own numbers.
 
 ### Uploading a CSV
 
@@ -155,6 +201,10 @@ node --test tests/engine.test.js
 - Accounting adds up: cycles, cumulative and step profits, revenue minus wear.
 - Full year: hindsight is the maximum, limits hold, months add up to the year.
 - The bundled data is a complete year; CSV uploads in common formats parse correctly.
+- Solar: clipping is bounded and yields are realistic; free energy is never over-used and never
+  makes the best plan worse.
+- Lifetime: matches a hand-calculated NPV, IRR and payback; more cycling means earlier new cells.
+- Every AI trade can be explained, with consistent numbers.
 
 GitHub runs these on every push (see the **Actions** tab). `tools/browser_check.py` is a separate
 cross-browser check of the page itself (Chromium, Firefox, WebKit, iPad, offline).

@@ -51,10 +51,37 @@
     { key: "capex", label: "Installed cost",        min: 100, max: 600,   step: 25,  fmt: (v) => `${CUR}${v}/kWh` },
     { key: "lo",    label: "Lowest charge level",   min: 0,   max: 45,    step: 5,   fmt: (v) => `${v}%` },
     { key: "hi",    label: "Highest charge level",  min: 55,  max: 100,   step: 5,   fmt: (v) => `${v}%` },
+    // Revenue streams
+    { key: "res",   label: "Power reserved for grid services", min: 0, max: 50, step: 5, fmt: (v) => (v ? `${v}%` : "none"), group: "stack" },
+    { key: "svc",   label: "Grid services price",   min: 0,   max: 40,    step: 1,   fmt: (v) => `${CUR}${v} per MW per hour`, group: "stack" },
+    { key: "capp",  label: "Capacity payment",      min: 0,   max: 200,   step: 5,   fmt: (v) => (v ? `${CUR}${v} per kW per year` : "none"), group: "stack" },
+    { key: "solar", label: "Co-located solar",      min: 0,   max: 500,   step: 10,  fmt: (v) => (v ? `${v} MW of panels` : "none"), group: "stack" },
+    // Battery lifetime
+    { key: "life",  label: "Project life",          min: 10,  max: 20,    step: 1,   fmt: (v) => `${v} years`, group: "life" },
+    { key: "disc",  label: "Discount rate",         min: 0,   max: 15,    step: 0.5, fmt: (v) => `${v}%`, group: "life" },
+    { key: "clife", label: "Cycle life (to 80% health)", min: 2000, max: 12000, step: 500, fmt: (v) => `${v.toLocaleString("en-US")} cycles`, group: "life" },
+    { key: "aug",   label: "Cost of new cells",     min: 50,  max: 400,   step: 10,  fmt: (v) => `${CUR}${v}/kWh`, group: "life" },
   ];
 
+  // Per-market starting points for the revenue streams. These are rough, illustrative levels, not
+  // market data: California pays for capacity (resource adequacy); Germany and Australia's NEM
+  // do not. Grid-services prices vary a lot by product and year; visitors should set their own.
+  const STREAM_DEFAULTS = {
+    sim:    { res: 20, svc: 8, capp: 40 },
+    caiso:  { res: 20, svc: 8, capp: 60 },
+    de:     { res: 20, svc: 8, capp: 0 },
+    sa:     { res: 0,  svc: 4, capp: 0 },
+    upload: { res: 0,  svc: 0, capp: 0 },
+  };
+  const streamDefaults = (key) => STREAM_DEFAULTS[SIM[key] ? "sim" : key] || STREAM_DEFAULTS.upload;
+  const solarSite = (key) => (SIM[key] || key === "upload" ? "sim" : key);
+
+  // Fixed lifetime assumptions (shown on the page).
+  const LIFE = { calendarFade: 0.01, augmentAt: 0.8, augDecline: 0.03, omPct: 0.015, warrantyCycles: 365, availability: 0.95 };
+
   const DEFAULTS = { p: "typical", d: null, mode: "forecast", cap: 100, pw: 25, wear: 3000, fe: 20, vol: 5,
-                     eff: 88, frag: 300, capex: 300, lo: 10, hi: 90, seed: 42 };
+                     eff: 88, frag: 300, capex: 300, lo: 10, hi: 90, seed: 42,
+                     res: 20, svc: 8, capp: 40, solar: 0, life: 15, disc: 8, clife: 6000, aug: 150 };
 
   // ------------------------------------------------------------------------------------
   // Dates (market local time, handled as naive UTC)
@@ -92,23 +119,54 @@
     };
   }
 
+  // The battery as the trading engine sees it: power reserved for grid services can't be traded.
+  const tradingBattery = (s) => ({ ...s, pw: Math.max(1, s.pw * (1 - s.res / 100)) });
+
   function simulate(state) {
     const mk = marketFor(state);
     CUR = mk.currency;
     const t0 = performance.now();
-    const w = E.runWindow(mk.prices, state, { mode: state.mode, fe: state.fe, seed: state.seed });
+    const free = state.solar > 0 ? E.solarClipping(mk.startMs, N, solarSite(state.p), state.solar, 1 + (state.d | 0)).free : null;
+    const w = E.runWindow(mk.prices, tradingBattery(state), { mode: state.mode, fe: state.fe, seed: state.seed, free });
     const ms = performance.now() - t0;
     const capex = state.cap * 1000 * state.capex;
     // Annual figures: the full-year simulation when it's available for this market, otherwise
     // (simulated markets) the 48-hour result scaled to a year.
     const year = mk.real ? annualCache.get(annualKey(state)) || null : null;
-    const annual = year ? year.ai.net * year.scale : w.ai.net * 182.5;
     const X = Array.from({ length: N }, (_, t) => fmtNaive(mk.startMs + t * STEP_MS));
-    return {
-      mk, X, XEND: fmtNaive(mk.startMs + N * STEP_MS), prices: mk.prices, ms,
+    const r = {
+      mk, X, XEND: fmtNaive(mk.startMs + N * STEP_MS), prices: mk.prices, ms, w,
       ai: w.ai, hind: w.hind, bot: w.bot, forecast: w.forecast, useForecast: w.useForecast,
-      capex, year, annual, roi: (annual / capex) * 100, payback: annual > 0 ? capex / annual : Infinity,
-      captured: w.hind.net > 1 ? (w.ai.net / w.hind.net) * 100 : null,
+      capex, year, captured: w.hind.net > 1 ? (w.ai.net / w.hind.net) * 100 : null,
+    };
+    // Annual figures use every revenue stream: energy trading (full-year simulation when available,
+    // otherwise the 48 hours scaled up) plus grid services and capacity payments.
+    r.stack = revenueStack(r, state);
+    r.annual = r.stack ? r.stack.total : w.ai.net * 182.5;
+    r.roi = (r.annual / capex) * 100;
+    r.payback = r.annual > 0 ? capex / r.annual : Infinity;
+    return r;
+  }
+
+  // ------------------------------------------------------------------------------------
+  // Revenue streams per year
+  // ------------------------------------------------------------------------------------
+  function revenueStack(r, s) {
+    const pending = r.mk.real && !r.year && hasYearData(s.p);
+    if (pending) return null;
+    const k = r.year ? r.year.scale : 182.5;                  // full year, or 48 hours scaled up
+    const src = r.year ? { ai: r.year.ai, bot: r.year.bot } : { ai: r.ai, bot: r.bot };
+    const reservedMW = s.pw * s.res / 100;
+    const services = reservedMW * s.svc * 8760 * LIFE.availability;
+    const duration = s.cap / s.pw;
+    const capacity = s.capp * s.pw * 1000 * Math.min(1, duration / 4);   // shorter than 4 h counts less
+    const energy = src.ai.net * k;
+    return {
+      basis: r.year ? (r.year.scale > 1.01 ? `scaled from ${r.year.days} days` : `full year ${r.mk.meta.year || ""}`.trim()) : "scaled from 48 hours",
+      energy, energyGross: src.ai.revenue * k, cycles: src.ai.cycles * k,
+      botGross: src.bot.revenue * k, botCycles: src.bot.cycles * k,
+      solarMWh: (src.ai.solarMWh || 0) * k, solarValue: (src.ai.solarValue || 0) * k,
+      services, capacity, reservedMW, duration, total: energy + services + capacity,
     };
   }
 
@@ -118,7 +176,7 @@
   // ------------------------------------------------------------------------------------
   const annualCache = new Map();
   let annualJob = null, annualTimer = 0;
-  const BATTERY_KEYS = ["cap", "pw", "wear", "eff", "frag", "lo", "hi"];
+  const BATTERY_KEYS = ["cap", "pw", "wear", "eff", "frag", "lo", "hi", "res", "solar"];
   const hasYearData = (key) => { const m = realMarket(key); return !!m && m.prices.length >= 28 * STEPS_PER_DAY; };
   function annualKey(s) {
     const src = s.p === "upload" && uploaded ? `${uploaded.name}:${uploaded.prices.length}` : "";
@@ -141,7 +199,9 @@
     const m = realMarket(state.p);
     const b = {};
     for (const k of BATTERY_KEYS) b[k] = state[k];
-    const opts = { mode: state.mode, fe: state.fe, seed: state.seed };
+    b.pw = tradingBattery(state).pw;
+    const opts = { mode: state.mode, fe: state.fe, seed: state.seed,
+                   solar: state.solar > 0 ? { site: solarSite(state.p), mwDC: state.solar, seed: 1 } : null };
     let worker = null;
     job.cancel = () => { job.cancelled = true; if (worker) worker.terminate(); };
     const done = (res) => {
@@ -184,6 +244,7 @@
     const p = params.get("p");
     if (SIM[p] || REAL[p]) s.p = p;
     if (SIM[s.p]) { s.vol = SIM[s.p].volatility; s.seed = SIM[s.p].seed; }
+    Object.assign(s, streamDefaults(s.p));
     if (params.get("mode") === "hindsight") s.mode = "hindsight";
     for (const c of CONTROLS) {
       const v = parseFloat(params.get(c.key));
@@ -267,12 +328,12 @@
       {
         x: buys.map((t) => X[t]), y: buys.map((t) => prices[t]), name: "AI buys", type: "scatter", mode: "markers",
         marker: { symbol: "triangle-up", size: 9, color: c.charge, line: { width: 1, color: c.surface } },
-        customdata: buys.map((t) => ai.moves[t] / DT), hovertemplate: "Buy %{customdata:.0f} MW<extra></extra>",
+        customdata: buys.map((t) => [t, ai.moves[t] / DT]), hovertemplate: "Buy %{customdata[1]:.0f} MW<extra></extra>",
       },
       {
         x: sells.map((t) => X[t]), y: sells.map((t) => prices[t]), name: "AI sells", type: "scatter", mode: "markers",
         marker: { symbol: "triangle-down", size: 9, color: c.discharge, line: { width: 1, color: c.surface } },
-        customdata: sells.map((t) => -ai.moves[t] / DT), hovertemplate: "Sell %{customdata:.0f} MW<extra></extra>",
+        customdata: sells.map((t) => [t, -ai.moves[t] / DT]), hovertemplate: "Sell %{customdata[1]:.0f} MW<extra></extra>",
       }
     );
     const shapes = blocks(ai.modes, upto).map(([mode, i0, i1]) => ({
@@ -490,6 +551,195 @@
     return Plotly.react(el, traces, layout, PLOT_CONFIG);
   }
 
+
+  // ------------------------------------------------------------------------------------
+  // Revenue streams section
+  // ------------------------------------------------------------------------------------
+  function renderStack(r) {
+    const st = r.stack, sec = $("stack");
+    sec.classList.toggle("pending", !st);
+    $("stack-note").textContent = st
+      ? `Per year, ${st.basis}. Energy trading is after battery wear; grid services and capacity payments are paid for availability.`
+      : "Waiting for the full-year simulation…";
+    if (!st) return;
+    const c = palette();
+    const parts = [
+      { label: "Energy trading", value: st.energy, color: c.ink },
+      { label: "Grid services", value: st.services, color: c.soc },
+      { label: "Capacity payments", value: st.capacity, color: c.price },
+    ];
+    const pos = parts.filter((x) => x.value > 0);
+    const sum = pos.reduce((a, x) => a + x.value, 0) || 1;
+    $("stack-bar").innerHTML = pos.map((x) =>
+      `<div class="seg-part" style="flex:${x.value / sum};background:${x.color}" title="${x.label}: ${money(x.value)}"></div>`).join("");
+    const roi = (st.total / r.capex) * 100, roiEnergy = (st.energy / r.capex) * 100;
+    const rows = [
+      [`<span class="dot" style="background:${c.ink}"></span>Energy trading`, money(st.energy),
+        st.solarMWh > 0.5 ? `includes ${fmtNum(st.solarMWh)} MWh of free clipped solar (worth about ${money(st.solarValue)} at market prices)` : "buying low and selling high, after battery wear"],
+      [`<span class="dot" style="background:${c.soc}"></span>Grid services`, money(st.services),
+        st.reservedMW > 0 ? `${st.reservedMW.toFixed(1)} MW kept back for frequency services, ${Math.round(LIFE.availability * 100)}% availability` : "no power reserved"],
+      [`<span class="dot" style="background:${c.price}"></span>Capacity payments`, money(st.capacity),
+        state.capp > 0 ? `paid for being available at peak${st.duration < 4 ? `; counts ${Math.round(Math.min(1, st.duration / 4) * 100)}% for a ${st.duration.toFixed(1)}-hour battery` : ""}` : "this market has no capacity payment set"],
+    ];
+    $("stack-table").innerHTML = `<tbody>${rows.map(([k, v, note]) =>
+      `<tr><td>${k}<div class="row-note">${note}</div></td><td class="ai">${v}</td></tr>`).join("")}
+      <tr class="total"><td>Total per year</td><td>${money(st.total)}</td></tr>
+      <tr><td>Annual ROI, all streams</td><td class="ai ${roi < 0 ? "neg" : ""}">${roi.toFixed(1)}%</td></tr>
+      <tr><td>Annual ROI, energy trading only</td><td>${roiEnergy.toFixed(1)}%</td></tr></tbody>`;
+    const solarTxt = state.solar > 0
+      ? ` Solar: ${state.solar} MW of panels on a ${(state.solar / E.DC_AC_RATIO).toFixed(0)} MW inverter (simulated output typical for the region, not measured). The battery stores the midday output the inverter can't export, for free; on its own that adds little, since the main benefits of pairing with solar (shared grid connection, tax credits) aren't modelled.`
+      : "";
+    $("stack-source").textContent = "Grid-services and capacity prices are adjustable assumptions, not market data: the defaults are rough, illustrative levels for each market. California pays for capacity (resource adequacy); Germany and Australia's NEM do not. Power kept back for grid services is not available for trading, and the simulations reflect that." + solarTxt;
+  }
+
+  // ------------------------------------------------------------------------------------
+  // Battery lifetime section
+  // ------------------------------------------------------------------------------------
+  function lifeInputs(r, who) {
+    const st = r.stack;
+    return {
+      years: state.life, capex: r.capex, capKWh: state.cap * 1000,
+      trading: who === "bot" ? st.botGross : st.energyGross,
+      cyclesPerYear: who === "bot" ? st.botCycles : st.cycles,
+      other: st.services + st.capacity,
+      cycleLife: state.clife, calendarFade: LIFE.calendarFade, augmentAt: LIFE.augmentAt, augCost: state.aug,
+      augDecline: LIFE.augDecline, omPct: LIFE.omPct, discount: state.disc / 100, warrantyCycles: LIFE.warrantyCycles,
+    };
+  }
+  // Physical wear per full cycle implied by the lifetime assumptions: new cells for the 20% of
+  // capacity a cycle-life's worth of cycles uses up.
+  const impliedWear = () => (0.2 * state.cap * 1000 * state.aug) / state.clife;
+
+  function renderLifetime(r) {
+    const sec = $("lifetime");
+    sec.classList.toggle("pending", !r.stack);
+    if (!r.stack) { $("life-note").textContent = "Waiting for the full-year simulation…"; return; }
+    const ai = E.lifetime(lifeInputs(r, "ai")), bot = E.lifetime(lifeInputs(r, "bot"));
+    r.life = { ai, bot };
+    $("life-note").textContent = `${state.life} years of cash flow with physical battery wear. Revenue per year comes from the revenue streams above (${r.stack.basis}); here battery wear is paid for when new cells are needed, instead of the agent's internal wear price.`;
+    const yrs = (v) => (v == null ? "—" : `${v.toFixed(1)} yrs`);
+    const kpis = [
+      { label: `Lifetime value (NPV at ${state.disc}%)`, value: money(ai.npv), sub: `rule-based bot: ${money(bot.npv)}`, cls: ai.npv < 0 ? "neg" : "pos" },
+      { label: "Internal rate of return", value: ai.irr == null ? "—" : `${(ai.irr * 100).toFixed(1)}%`, sub: bot.irr == null ? "bot: —" : `bot: ${(bot.irr * 100).toFixed(1)}%` },
+      { label: "Payback", value: yrs(ai.payback), sub: `${ai.payback == null ? `not within ${state.life} years · ` : ""}bot: ${yrs(bot.payback)}` },
+      { label: "New cells needed", value: ai.augments ? `${ai.augments}×` : "none", sub: `${ai.firstAug ? `first in year ${ai.firstAug} · ` : ""}bot: ${bot.augments}×` },
+    ];
+    $("life-kpis").innerHTML = kpis.map((k) =>
+      `<div class="kpi"><div class="label">${k.label}</div><div class="value ${k.cls || ""}">${k.value}</div><div class="sub">${k.sub}</div></div>`).join("");
+
+    const cyc = Math.round(r.stack.cycles), botCyc = Math.round(r.stack.botCycles);
+    const warn = (n) => (n <= LIFE.warrantyCycles ? `within a typical ${LIFE.warrantyCycles}-cycle-a-year warranty` : `<b>over</b> a typical ${LIFE.warrantyCycles}-cycle-a-year warranty limit`);
+    let text = `The AI uses <b>${cyc} cycles a year</b>, ${warn(cyc)}, and needs new cells ${ai.augments ? `${ai.augments} time${ai.augments > 1 ? "s" : ""}` : "never"} in ${state.life} years.`
+      + ` The rule-based bot uses <b>${botCyc}</b>, ${warn(botCyc)}, and needs them ${bot.augments ? `${bot.augments} time${bot.augments > 1 ? "s" : ""}${bot.firstAug ? ` (first in year ${bot.firstAug})` : ""}` : "never"}`
+      + (bot.augTotal > ai.augTotal ? `, costing ${money(bot.augTotal - ai.augTotal)} more in replacement cells.` : ".");
+    const iw = impliedWear();
+    text += ` These assumptions put physical wear at about <b>${money(iw)} per full cycle</b>; the agent currently prices it at ${money(state.wear)}.`
+      + (Math.abs(iw - state.wear) > 250 ? ` <button type="button" class="link-btn" id="use-wear">Use ${money(Math.round(iw / 250) * 250)}</button>` : "");
+    $("life-insight").innerHTML = text;
+    const useBtn = $("use-wear");
+    if (useBtn) useBtn.onclick = () => { state.wear = Math.min(20000, Math.max(0, Math.round(iw / 250) * 250)); syncControls(); scheduleRender(); toast("Wear price updated: the AI re-plans"); };
+
+    $("life-assumptions").textContent = `Assumptions: battery health falls 20% over the cycle life plus ${LIFE.calendarFade * 100}% a year with age; when it drops below ${LIFE.augmentAt * 100}%, new cells restore it to 100% at the cost above, getting ${LIFE.augDecline * 100}% cheaper each year; operation and maintenance ${LIFE.omPct * 100}% of the installed cost a year; trading revenue scales with battery health; no tax, financing or residual value.`;
+    renderLifeCharts(r, ai, bot, palette(), "chart-health", "chart-cash");
+  }
+
+  function renderLifeCharts(r, ai, bot, c, healthEl, cashEl, print) {
+    const health = (res) => {
+      const x = [0], y = [100];
+      for (const row of res.rows) {
+        x.push(row.year); y.push(row.healthEnd * 100);
+        if (row.healthAfter > row.healthEnd) { x.push(row.year); y.push(100); }
+      }
+      return { x, y };
+    };
+    const font = { family: print ? "Helvetica, Arial, sans-serif" : getComputedStyle(document.body).fontFamily, size: 12, color: c.muted };
+    const base = (extra) => ({
+      margin: { l: 56, r: 8, t: 8, b: 32 }, showlegend: false, paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+      font, hovermode: "x unified", hoverlabel: { bgcolor: c.surface, bordercolor: c.line, font: { color: c.ink, size: 12 } },
+      xaxis: { title: { text: "Year", font: { size: 11 } }, showgrid: false, linecolor: c.line, fixedrange: true, dtick: 1 },
+      ...extra,
+    });
+    const ha = health(ai), hb = health(bot);
+    const p1 = Plotly.react(healthEl, [
+      { x: hb.x, y: hb.y, name: "Bot", type: "scatter", mode: "lines", line: { color: c.bot, width: 2, dash: "dot" }, hovertemplate: "Bot %{y:.0f}%<extra></extra>" },
+      { x: ha.x, y: ha.y, name: "AI", type: "scatter", mode: "lines", line: { color: c.ink, width: 2.5 }, hovertemplate: "AI %{y:.0f}%<extra></extra>" },
+    ], base({
+      yaxis: { gridcolor: c.line, fixedrange: true, ticksuffix: "%", range: [Math.min(75, Math.min(...ha.y, ...hb.y) - 2), 101] },
+      shapes: [{ type: "line", xref: "paper", x0: 0, x1: 1, y0: LIFE.augmentAt * 100, y1: LIFE.augmentAt * 100, line: { color: c.discharge, width: 1, dash: "dot" } }],
+    }), PLOT_CONFIG);
+    const cum = (res) => ({ x: [0, ...res.rows.map((row) => row.year)], y: [-r.capex, ...res.rows.map((row) => row.cum)] });
+    const ca = cum(ai), cb = cum(bot);
+    const p2 = Plotly.react(cashEl, [
+      { x: cb.x, y: cb.y, name: "Bot", type: "scatter", mode: "lines", line: { color: c.bot, width: 2, dash: "dot" }, hovertemplate: `Bot ${CUR}%{y:,.0f}<extra></extra>` },
+      { x: ca.x, y: ca.y, name: "AI", type: "scatter", mode: "lines", line: { color: c.ink, width: 2.5 }, hovertemplate: `AI ${CUR}%{y:,.0f}<extra></extra>` },
+    ], base({ yaxis: { gridcolor: c.line, fixedrange: true, tickprefix: CUR, tickformat: ",.2s", zeroline: true, zerolinecolor: c.muted } }), PLOT_CONFIG);
+    return Promise.all([p1, p2]);
+  }
+
+  // ------------------------------------------------------------------------------------
+  // "Why this trade?"
+  // ------------------------------------------------------------------------------------
+  function hideExplain() { $("explain").hidden = true; }
+
+  function showExplain(t) {
+    const r = last;
+    const x = E.explainTrade(r.prices, r.w, tradingBattery(state), t);
+    if (!x) { hideExplain(); return; }
+    const p2 = (v) => `${CUR}${Math.round(v).toLocaleString("en-US")}`;
+    const at = (i) => fmtClock(parseNaive(r.X[i]));
+    const span = (o) => (o.from === o.to ? `at ${at(o.from)}` : `${at(o.from)}–${r.X[o.to + 1] ? r.X[o.to + 1].slice(11) : "end"}`);
+    const source = r.useForecast ? `The forecast it had at ${at(x.planTau)}` : "Knowing the actual prices, the plan";
+    const bot = x.botMove > 1e-9 ? "bought" : x.botMove < -1e-9 ? "sold" : "did nothing";
+    let lead, cells, notes = [];
+    if (x.kind === "buy") {
+      lead = `<b>Bought ${x.mw.toFixed(0)} MW at ${p2(x.price)}/MWh</b> <span class="muted">${at(t)}</span>`;
+      notes.push(x.expected
+        ? `${source} expected prices around <b>${p2(x.expected.price)}</b> ${span(x.expected)}, when it planned to sell this energy.`
+        : "Its plan didn't sell this energy within the 48 hours: it was topping the battery up to finish at least as full as it started.");
+      if (x.price <= x.cheapestAhead + 0.5) notes.push("This was the cheapest price in its forecast for the next 24 hours.");
+      if (x.freeMWh) notes.push(`${x.freeMWh.toFixed(1)} MWh of this came from solar the inverter couldn't export, so that part was free.`);
+      cells = [
+        ["Cost per stored MWh", p2(x.costPerStored), "after efficiency losses"],
+        ["Expected sale per MWh", x.expected ? p2(x.expected.price * x.eta) : "—", "after efficiency losses"],
+        ["Battery wear", p2(x.wearRound), "per MWh in and out"],
+        ["Expected margin", x.margin == null ? "—" : p2(x.margin), "per MWh", x.margin == null ? "" : x.margin >= 0 ? "pos" : "neg"],
+      ];
+      if (r.useForecast && x.actual) notes.push(`What actually happened: it sold this energy at about ${p2(x.actual.price)} ${span(x.actual)}.`);
+    } else {
+      lead = `<b>Sold ${x.mw.toFixed(0)} MW at ${p2(x.price)}/MWh</b> <span class="muted">${at(t)}</span>`;
+      if (x.bought) notes.push(`This energy was bought ${span(x.bought)} at about <b>${p2(x.bought.price)}</b>/MWh.`);
+      else if (x.rebuy) notes.push(`This was energy already in the battery at the start; ${source.toLowerCase()} refilled it ${span(x.rebuy)} at about <b>${p2(x.rebuy.price)}</b>/MWh, so selling now and buying back later pays.`);
+      else notes.push("This was energy already in the battery at the start, valued at the average price.");
+      if (x.aheadMax && x.aheadMax.price > x.price * 1.03) notes.push(`The forecast showed higher prices later (about ${p2(x.aheadMax.price)} ${at(x.aheadMax.at)}); with limited power it sells some now and keeps some for then.`);
+      else notes.push("This was the best price in its forecast for the next 12 hours.");
+      cells = [
+        ["Sale per MWh", p2(x.price * x.eta), "after efficiency losses"],
+        [x.rebuy && !x.bought ? "Cost to refill" : "Cost per stored MWh", p2(x.costPerStored), "after efficiency losses"],
+        ["Battery wear", p2(x.wearRound), "per MWh in and out"],
+        ["Margin", p2(x.margin), "per MWh", x.margin >= 0 ? "pos" : "neg"],
+      ];
+    }
+    if (x.margin != null && x.margin < 0) notes.push("On its own this step doesn't pay: the plan makes it to set up a better trade later (for example making room to recharge more cheaply), or the forecast it relied on was wrong.");
+    notes.push(`The rule-based bot ${bot} at this moment.`);
+    $("explain-body").innerHTML = `
+      <div class="explain-lead">${lead}</div>
+      <div class="explain-cells">${cells.map(([k, v, sub, cls]) => `<div><div class="label">${k}</div><div class="value ${cls || ""}">${v}</div><div class="sub">${sub}</div></div>`).join("")}</div>
+      <ul class="explain-notes">${notes.map((n) => `<li>${n}</li>`).join("")}</ul>`;
+    $("explain").hidden = false;
+  }
+
+  function onChartClick(ev) {
+    if (kiosk.on || !last || !ev || !ev.points || !ev.points.length) return;
+    let t = null;
+    for (const pt of ev.points) if (pt.data && (pt.data.name === "AI buys" || pt.data.name === "AI sells") && pt.customdata) t = pt.customdata[0];
+    if (t == null) {
+      const i = last.X.indexOf(String(ev.points[0].x).slice(0, 16));
+      if (i >= 0 && last.ai.modes[i] !== IDLE) t = i;
+    }
+    if (t == null) { hideExplain(); return; }
+    showExplain(t);
+  }
+
   function updateDaySelect(r) {
     const sel = $("day-select");
     if (!r.mk.real) { sel.hidden = true; return; }
@@ -506,6 +756,7 @@
 
   let state = readState();
   let last = null;
+  let clickBound = false;
 
   function render(upto = N) {
     const r = simulate(state);
@@ -523,6 +774,10 @@
     updateDaySelect(r);
     requestAnnual();
     renderAnnual(r);
+    renderStack(r);
+    renderLifetime(r);
+    hideExplain();
+    if (!clickBound && $("chart-main").on) { $("chart-main").on("plotly_click", onChartClick); clickBound = true; }
     $("solve-time").textContent = `Agent planned 192 intervals in ${Math.max(1, Math.round(r.ms))} ms`;
     writeState();
     return r;
@@ -551,7 +806,7 @@
       wrap.innerHTML = `
         <label for="in-${c.key}"><span>${c.label}</span><output id="out-${c.key}"></output></label>
         <input type="range" id="in-${c.key}" min="${c.min}" max="${c.max}" step="${c.step}">`;
-      $(c.main ? "main-controls" : "more-controls").appendChild(wrap);
+      $(c.group ? `${c.group}-controls` : c.main ? "main-controls" : "more-controls").appendChild(wrap);
       const input = wrap.querySelector("input");
       input.addEventListener("input", () => {
         state[c.key] = parseFloat(input.value);
@@ -599,6 +854,7 @@
     state.p = key;
     state.d = SIM[key] ? 0 : defaultDay(key);
     if (SIM[key]) { state.seed = SIM[key].seed; state.vol = SIM[key].volatility; }
+    Object.assign(state, streamDefaults(key));
     syncControls();
     scheduleRender();
   }
@@ -828,6 +1084,30 @@
       ["Installed cost", `${CUR}${state.capex}/kWh (${money(r.capex)} total)`],
     ].map(([a, b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join("");
     const contactLine = [f.author, f.contact].filter(Boolean).map(esc).join(" · ");
+    let streamsHtml = "";
+    if (r.stack) {
+      const st = r.stack, lifeAi = E.lifetime(lifeInputs(r, "ai")), lifeBot = E.lifetime(lifeInputs(r, "bot"));
+      const pct = (v) => (v == null ? "—" : `${(v * 100).toFixed(1)}%`);
+      const yrsTxt = (v) => (v == null ? `not within ${state.life} years` : `${v.toFixed(1)} years`);
+      const streamRows = [
+        ["Energy trading (after wear)", money(st.energy)],
+        [`Grid services (${st.reservedMW.toFixed(1)} MW at ${CUR}${state.svc}/MW·h)`, money(st.services)],
+        [`Capacity payments (${CUR}${state.capp}/kW·yr)`, money(st.capacity)],
+        ["<b>Total per year</b>", `<b>${money(st.total)}</b>`],
+      ].map(([a, b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join("");
+      const lifeRows = [
+        [`Lifetime value (NPV, ${state.life} yrs at ${state.disc}%)`, `<b>${money(lifeAi.npv)}</b>`, money(lifeBot.npv)],
+        ["Internal rate of return", pct(lifeAi.irr), pct(lifeBot.irr)],
+        ["Payback", yrsTxt(lifeAi.payback), yrsTxt(lifeBot.payback)],
+        ["Cycles per year", Math.round(st.cycles), Math.round(st.botCycles)],
+        ["New cells needed", `${lifeAi.augments}×`, `${lifeBot.augments}×`],
+      ].map(([a, b, c]) => `<tr><td>${a}</td><td>${b}</td><td>${c}</td></tr>`).join("");
+      streamsHtml = `
+      <div class="rp-cols">
+        <div><h3>Revenue streams per year</h3><table class="rp-table"><tbody>${streamRows}</tbody></table></div>
+        <div><h3>Over the project life</h3><table class="rp-table"><thead><tr><th></th><th>AI</th><th>Rule-based bot</th></tr></thead><tbody>${lifeRows}</tbody></table></div>
+      </div>`;
+    }
     const annualNote = y
       ? (days >= 365
         ? "Annual figures come from operating the battery through every hour of the year on actual prices; past prices don't guarantee future revenue."
@@ -856,6 +1136,7 @@
           <table class="rp-table"><tbody>${asset}</tbody></table>
         </div>
       </div>
+      ${streamsHtml}
       <h3>Market and method</h3>
       <table class="rp-table"><tbody>
         <tr><td>Prices</td><td>${period}</td></tr>
@@ -864,7 +1145,7 @@
       </tbody></table>
       <ul class="rp-notes">
         <li>${annualNote}</li>
-        <li>Energy arbitrage only. Ancillary services, capacity payments and other revenue streams are not included.</li>
+        <li>${r.stack && (r.stack.services || r.stack.capacity) ? "Grid-services and capacity prices are assumptions entered in the demo, not market data." : "Energy arbitrage only; grid services and capacity payments are not included."} Lifetime: health falls 20% over ${state.clife.toLocaleString("en-US")} cycles plus 1% a year; new cells at ${CUR}${state.aug}/kWh below 80% health; O&amp;M 1.5% of installed cost a year; no tax or financing.</li>
         <li>Battery wear is charged at the stated cost per full cycle. Forecast error is simulated on top of actual prices.</li>
         <li>Illustrative estimate, not a financial forecast or investment advice.</li>
       </ul>

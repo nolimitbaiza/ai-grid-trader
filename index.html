@@ -116,6 +116,12 @@
         </div>
       </div>
       <div id="chart-main" class="chart" role="img" aria-label="Electricity price over 48 hours with the battery's charge level and the AI's buy and sell decisions"></div>
+      <p class="click-hint">Click any <span style="color:var(--charge)">▲</span> or <span style="color:var(--discharge)">▼</span> to see why the AI made that trade.</p>
+      <div class="explain" id="explain" hidden>
+        <button class="explain-close" type="button" aria-label="Close explanation" onclick="document.getElementById('explain').hidden = true">×</button>
+        <div class="kicker">Why this trade?</div>
+        <div id="explain-body"></div>
+      </div>
       <p class="insight" id="insight"></p>
       <p class="source" id="source"></p>
     </section>
@@ -165,6 +171,53 @@
         </div>
         <table class="compare" id="annual-compare"></table>
       </div>
+    </section>
+
+    <section class="card stack" id="stack">
+      <div class="annual-head">
+        <div>
+          <h2>Revenue streams</h2>
+          <p class="note" id="stack-note"></p>
+        </div>
+      </div>
+      <div class="stack-bar" id="stack-bar" aria-hidden="true"></div>
+      <div class="stack-body">
+        <table class="compare stack-table" id="stack-table"></table>
+        <div class="grid grid-2" id="stack-controls"></div>
+      </div>
+      <p class="source" id="stack-source"></p>
+    </section>
+
+    <section class="card lifetime" id="lifetime">
+      <div class="annual-head">
+        <div>
+          <h2>Battery lifetime</h2>
+          <p class="note" id="life-note"></p>
+        </div>
+      </div>
+      <div class="kpis kpis-4" id="life-kpis"></div>
+      <div class="life-charts">
+        <div>
+          <div class="legend" aria-hidden="true">
+            <span><i class="sw" style="background:var(--ink)"></i>AI agent</span>
+            <span><i class="sw sw-dot"></i>Rule-based bot</span>
+            <span><i class="sw sw-dash-red"></i>New cells needed below</span>
+          </div>
+          <h3 class="chart-title">Battery health</h3>
+          <div id="chart-health" class="chart chart-sm" role="img" aria-label="Battery health over the project life, AI compared with the rule-based bot"></div>
+        </div>
+        <div>
+          <div class="legend" aria-hidden="true">
+            <span><i class="sw" style="background:var(--ink)"></i>AI agent</span>
+            <span><i class="sw sw-dot"></i>Rule-based bot</span>
+          </div>
+          <h3 class="chart-title">Cumulative cash flow</h3>
+          <div id="chart-cash" class="chart chart-sm" role="img" aria-label="Cumulative cash flow over the project life, AI compared with the rule-based bot"></div>
+        </div>
+      </div>
+      <p class="insight" id="life-insight"></p>
+      <div class="grid" id="life-controls"></div>
+      <p class="source" id="life-assumptions"></p>
     </section>
 
     <section class="how">
