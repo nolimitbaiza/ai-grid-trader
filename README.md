@@ -68,8 +68,24 @@ Bundled: the **whole of 2025** (365 days, 15-minute steps) for each market:
 | South Australia | NEM SA1 spot (AUD) | [AEMO](https://aemo.com.au) |
 
 Times are each market's standard time all year (no daylight-saving jumps). Hourly prices are
-repeated across their quarter-hours. `tools/build_markets.py` rebuilds `assets/data/markets.js`
-from the public downloads (the URLs are in the script).
+repeated across their quarter-hours. Each market's prices are a separate file that the page
+loads only when that market is opened, so the first visit stays light.
+
+**Kept up to date automatically.** Once a month, a GitHub Actions job (`refresh-data.yml`) checks
+whether a newer complete calendar year is available. When it is (2026 prices once January 2027
+starts), it downloads that year from the sources above, rebuilds the price and grid-services
+files, runs the model tests and publishes the update. If a source hasn't published the whole year
+yet, the job fails and simply tries again the next month. You can also run it by hand from the
+**Actions** tab (*Refresh market data → Run workflow*) and choose a year. Installed-cost
+benchmarks don't update automatically, and the results quoted in this README are for 2025.
+
+To rebuild by hand:
+
+```bash
+python tools/fetch_data.py raw --year 2025      # downloads ~1,000 small files, 20-40 minutes
+python tools/build_markets.py raw --year 2025
+python tools/build_services.py raw --year 2025  # needs: pip install openpyxl
+```
 
 **Full-year results.** For a real market, the page runs the same agent through all 8,760 hours
 of 2025 in the background (a few seconds): it re-plans every hour on a forecast with a
@@ -222,6 +238,14 @@ sell above it), all scored with the same accounting.
 > come from simulating all of 2025; for the simulated scenarios they scale a 48-hour window.
 > Forecast error is simulated. Past prices don't guarantee future revenue.
 
+## Accessibility
+
+Every control works with the keyboard and shows a focus ring. Charts carry text descriptions for
+screen readers, including the main chart's price range, trades and profit. **Explain the first
+trade** opens "Why this trade?" without a mouse, with *Previous / Next trade* buttons, and
+explanations are announced to screen readers. Text contrast meets WCAG AA in both themes. An automated audit
+(axe-core) runs with the browser checks on every push.
+
 ## Tests
 
 `tests/engine.test.js` checks the model with Node's built-in test runner (no installs):
@@ -255,17 +279,21 @@ index.html                  The demo page (served by GitHub Pages)
 assets/engine.js            The model: markets, RL agent, forecasts, benchmarks, accounting, full year
 assets/app.js               The page: controls, charts, full-year worker, kiosk, PDF, sharing
 assets/style.css            Minimal light/dark theme and the printable business case
-assets/data/markets.js      Real prices for all of 2025 (15-minute)
+assets/data/markets.js      Index of the real markets (loaded with the page)
+assets/data/prices-*.js     A full year of 15-minute prices per market (loaded on demand)
+assets/data/services.js     Yearly grid-services price averages (the defaults)
 assets/vendor/              Plotly.js (bundled for offline use)
 assets/img/                 Profile photo and LinkedIn QR code
 assets/icons/, manifest.webmanifest, sw.js   Installable app + offline cache
 assets/og.png               Link-preview image
-tools/build_markets.py      Rebuilds the real-price data file
-tools/build_services.py     2025 grid-services price averages (the defaults)
+tools/fetch_data.py         Downloads a year of public market data
+tools/build_markets.py      Rebuilds the real-price data files
+tools/build_services.py     Rebuilds the grid-services price averages
 tools/build_assets.py       Rebuilds the app icons and QR code
 tools/build_og.py           Rebuilds the link-preview image
 tools/browser_check.py      Cross-browser smoke test (Chromium, Firefox, WebKit, iPad, offline)
-tests/engine.test.js        Automated model tests; .github/workflows/test.yml runs them
+tests/engine.test.js        Automated model tests; .github/workflows/test.yml runs them on every push
+.github/workflows/refresh-data.yml   Monthly check for a newer full year of prices
 streamlit_app/              Earlier analyst prototype in Python (Streamlit)
 LICENSE.md                  PolyForm Noncommercial 1.0.0
 ```

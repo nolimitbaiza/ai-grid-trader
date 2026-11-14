@@ -4,7 +4,7 @@
   --bg: #fafaf9;
   --surface: #ffffff;
   --ink: #0c0a09;
-  --muted: #78716c;
+  --muted: #6f6863;
   --line: #e7e5e4;
   --soft: #f5f5f4;
   --price: #d97706;
@@ -200,6 +200,13 @@ input[type="range"]::-moz-range-thumb {
   width: 12px; height: 12px; border-radius: 50%; background: var(--surface); border: 2px solid var(--ink);
 }
 input[type="range"]:focus-visible { outline: none; }
+input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 4px color-mix(in srgb, var(--soc) 35%, transparent); }
+body.loading-data #chart-main, body.loading-data #kpis { opacity: .4; transition: opacity .2s; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.explain-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; }
+.explain-nav .muted { margin: 0; font-size: 12.5px; }
+.explain-nav button:disabled { opacity: .4; cursor: default; }
+.explain-lead:focus { outline: none; }
 input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px color-mix(in srgb, var(--soc) 35%, transparent); }
 
 /* ---------- Comparison ---------- */

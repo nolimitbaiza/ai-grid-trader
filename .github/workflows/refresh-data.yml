@@ -1,0 +1,82 @@
+# Keeps the demo on the latest full calendar year of real prices.
+# Once a month it checks whether a newer complete year is available (e.g. 2026 once January 2027
+# starts). If so it downloads that year's public data, rebuilds assets/data/, runs the tests and
+# publishes the update; GitHub Pages then serves it. Otherwise it does nothing.
+# Run it by hand from the Actions tab ("Refresh market data" > "Run workflow") to pick a year.
+name: Refresh market data
+
+on:
+  schedule:
+    - cron: "0 6 3 * *"          # 3rd of every month, 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      year:
+        description: "Calendar year to load (empty: the last complete year)"
+        required: false
+      force:
+        description: "Rebuild even if that year is already loaded"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency: refresh-data
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Decide which year
+        id: year
+        run: |
+          YEAR="${{ inputs.year }}"
+          [ -z "$YEAR" ] && YEAR=$(( $(date -u +%Y) - 1 ))
+          CURRENT=$(grep -o '"year":[0-9]*' assets/data/markets.js | head -1 | cut -d: -f2)
+          echo "year=$YEAR" >> "$GITHUB_OUTPUT"
+          if [ "$CURRENT" = "$YEAR" ] && [ "${{ inputs.force }}" != "true" ]; then
+            echo "Already showing $YEAR prices; nothing to do."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Showing $CURRENT prices; loading $YEAR."
+          fi
+
+      - uses: actions/setup-python@v5
+        if: steps.year.outputs.skip != 'true'
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        if: steps.year.outputs.skip != 'true'
+        with:
+          node-version: 22
+
+      # Fails (and retries next month) if a source hasn't published the whole year yet:
+      # AEMO's monthly archive, for example, appears a few weeks after the month ends.
+      - name: Download public data
+        if: steps.year.outputs.skip != 'true'
+        run: python tools/fetch_data.py raw --year ${{ steps.year.outputs.year }}
+
+      - name: Rebuild price and services data
+        if: steps.year.outputs.skip != 'true'
+        run: |
+          pip install openpyxl
+          python tools/build_markets.py raw --year ${{ steps.year.outputs.year }}
+          python tools/build_services.py raw --year ${{ steps.year.outputs.year }}
+
+      - name: Model tests on the new data
+        if: steps.year.outputs.skip != 'true'
+        run: node --test tests/engine.test.js
+
+      - name: Publish
+        if: steps.year.outputs.skip != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/data
+          if git diff --cached --quiet; then echo "Data unchanged."; exit 0; fi
+          git commit -m "Update market data to ${{ steps.year.outputs.year }}"
+          git push

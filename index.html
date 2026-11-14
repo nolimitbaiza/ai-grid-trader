@@ -80,7 +80,7 @@
         <label class="chip chip-upload" title="CSV with a price column, and ideally a timestamp column. It never leaves your browser.">
           <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           Upload CSV
-          <input type="file" id="file-input" accept=".csv,.txt,text/csv" hidden>
+          <input type="file" id="file-input" class="sr-only" accept=".csv,.txt,text/csv">
         </label>
       </div>
       <div class="chips chips-tools">
@@ -116,11 +116,11 @@
         </div>
       </div>
       <div id="chart-main" class="chart" role="img" aria-label="Electricity price over 48 hours with the battery's charge level and the AI's buy and sell decisions"></div>
-      <p class="click-hint">Click any <span style="color:var(--charge)">▲</span> or <span style="color:var(--discharge)">▼</span> to see why the AI made that trade.</p>
+      <p class="click-hint">Click any <span style="color:var(--charge)" aria-hidden="true">▲</span> or <span style="color:var(--discharge)" aria-hidden="true">▼</span> to see why the AI made that trade, or <button type="button" class="link-btn" id="explain-first">explain the first trade</button>.</p>
       <div class="explain" id="explain" hidden>
         <button class="explain-close" type="button" aria-label="Close explanation" onclick="document.getElementById('explain').hidden = true">×</button>
         <div class="kicker">Why this trade?</div>
-        <div id="explain-body"></div>
+        <div id="explain-body" aria-live="polite"></div>
       </div>
       <p class="insight" id="insight"></p>
       <p class="source" id="source"></p>
@@ -249,7 +249,7 @@
         (the actual prices plus simulated forecast error that grows with lead time and smooths out peaks and dips),
         re-plans the rest of the horizon, and executes the next hour. <b>Perfect hindsight</b> plans on the actual
         prices and shows the theoretical maximum.</p>
-      <p>For the real markets, the <b>full-year</b> results run the same agent through all 8,760 hours of 2025
+      <p>For the real markets, the <b>full-year</b> results run the same agent through all 8,760 hours of <span class="data-year">2025</span>
         (re-planning every hour on a 24-hour forecast), so annual revenue and seasonality come from real prices rather
         than from scaling up two days.</p>
     </details>
@@ -307,6 +307,7 @@
 
   <script src="assets/vendor/plotly-basic-2.35.2.min.js"></script>
   <script src="assets/data/markets.js"></script>
+  <script src="assets/data/services.js"></script>
   <script src="assets/engine.js"></script>
   <script src="assets/app.js"></script>
 </body>

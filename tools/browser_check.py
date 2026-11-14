@@ -47,8 +47,11 @@ def run(pw, label, browser_type, **ctx):
         page.wait_for_timeout(400)
     check("clicking a trade opens 'Why this trade?'", page.is_visible("#explain") and "MW" in page.inner_text("#explain-body"))
 
-    page.click(".chip[data-key=de]")
-    page.wait_for_timeout(400)
+    page.click(".chip[data-key=de]")          # loads Germany's prices on demand
+    try:
+        page.wait_for_function("document.querySelector('#kpis .value').textContent.includes('€')", timeout=15000)
+    except Exception:
+        pass
     check("real market (Germany) loads", "€" in page.locator("#kpis .value").first.inner_text())
     check("source line shows data provenance", "SMARD" in page.inner_text("#source"))
     try:
@@ -63,6 +66,20 @@ def run(pw, label, browser_type, **ctx):
         life = page.locator("#life-kpis .value").all_inner_texts()
         check("lifetime figures shown", len(life) == 4 and all(life), " | ".join(life))
         check("lifetime charts drawn", page.locator("#chart-health .main-svg").count() > 0 and page.locator("#chart-cash .main-svg").count() > 0)
+
+    page.click("#explain-first")                  # keyboard-friendly route to "Why this trade?"
+    page.wait_for_timeout(300)
+    check("'explain the first trade' button works", page.is_visible("#explain") and "trades" in page.inner_text("#explain-body"))
+    if label.startswith("Chromium"):
+        # Automated accessibility audit (axe-core: contrast, labels, roles, ...), both themes.
+        page.add_script_tag(url="https://cdn.jsdelivr.net/npm/axe-core@4.10.2/axe.min.js")
+        audit = "async () => (await axe.run(document, {resultTypes: ['violations']})).violations.map(v => v.id + ' x' + v.nodes.length)"
+        for theme in ("light", "dark"):
+            page.evaluate(f"document.documentElement.setAttribute('data-theme', '{theme}')")
+            page.wait_for_timeout(500)
+            found = page.evaluate(audit)
+            check(f"no accessibility violations ({theme} theme)", not found, ", ".join(found))
+        page.evaluate("document.documentElement.removeAttribute('data-theme')")
 
     page.click(".seg button[data-mode=hindsight]")
     page.wait_for_timeout(300)

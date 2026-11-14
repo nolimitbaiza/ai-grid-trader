@@ -26,7 +26,7 @@
 
   // Chart colours, mirrored from style.css (charts are drawn in JS, and the PDF always uses light).
   const PALETTES = {
-    light: { ink: "#0c0a09", muted: "#78716c", line: "#e7e5e4", surface: "#ffffff", price: "#d97706", forecast: "#a8a29e",
+    light: { ink: "#0c0a09", muted: "#6f6863", line: "#e7e5e4", surface: "#ffffff", price: "#d97706", forecast: "#a8a29e",
              soc: "#3b82f6", socFill: "rgba(59,130,246,0.12)", charge: "#16a34a", discharge: "#dc2626", bot: "#a8a29e" },
     dark:  { ink: "#f5f5f4", muted: "#a1a1aa", line: "#27272a", surface: "#151517", price: "#fbbf24", forecast: "#71717a",
              soc: "#60a5fa", socFill: "rgba(96,165,250,0.14)", charge: "#22c55e", discharge: "#f87171", bot: "#71717a" },
@@ -71,30 +71,34 @@
   //   Germany:    BNEF 2025 Europe turnkey ($177/kWh ≈ €155) + ~€50/kWh installation and grid connection.
   //   S Australia: CSIRO GenCost 2025-26, 4-hour battery, A$385/kWh total (A$265 battery + A$120 balance of plant).
   // New cells (augmentation) cost the battery part only. The agent's wear price defaults to the
-  // physical wear these imply (see impliedWear). Grid-services prices are 2025 averages of real
-  // market results (tools/build_services.py); capacity payments are illustrative.
+  // physical wear these imply (see impliedWear). Grid-services prices are yearly averages of real
+  // market results (assets/data/services.js, built by tools/build_services.py and refreshed with
+  // the price data); capacity payments are illustrative.
+  const SV = Object.assign({ year: 2025, caiso: { svc: 7.2 }, de: { svc: 15.2, afrr: 33.6 }, sa: { svc: 5.6 } },
+                           window.GRID_SERVICES || {});
   // Where each real market's defaults come from (shown on the page and in the business case).
   const MARKET_INFO = {
     caiso: {
-      svc: "California's 2025 day-ahead average for regulation up plus regulation down: $7.2 per MW per hour (CAISO OASIS; mileage payments not included)",
+      svc: `California's ${SV.year} day-ahead average for regulation up plus regulation down: $${SV.caiso.svc} per MW per hour (CAISO OASIS; mileage payments not included)`,
       cost: "$280/kWh all-in: BloombergNEF's 2025 US turnkey average ($219/kWh) plus about $60/kWh for installation and grid connection (Ember, 2025)",
       itc: "the US federal investment tax credit for storage, IRC §48E",
     },
     de: {
-      svc: "Germany's 2025 average FCR (primary frequency reserve) price: €15.2 per MW per hour (regelleistung.net). aFRR paid more on average in 2025 (about €33.6 per MW per hour for up plus down) but is less predictable",
+      svc: `Germany's ${SV.year} average FCR (primary frequency reserve) price: €${SV.de.svc} per MW per hour (regelleistung.net)`
+        + (SV.de.afrr ? `. aFRR paid ${SV.de.afrr > SV.de.svc ? "more" : "less"} on average (about €${SV.de.afrr} per MW per hour for up plus down) and is less predictable` : ""),
       cost: "€205/kWh all-in: BloombergNEF's 2025 Europe turnkey average ($177/kWh, about €155) plus about €50/kWh for installation and grid connection",
     },
     sa: {
-      svc: "South Australia's 2025 average for the six contingency FCAS markets combined (raise and lower, 6 s / 60 s / 5 min): A$5.6 per MW per hour (AEMO). Power is not reserved by default because trading pays far more here",
+      svc: `South Australia's ${SV.year} average for the six contingency FCAS markets combined (raise and lower, 6 s / 60 s / 5 min): A$${SV.sa.svc} per MW per hour (AEMO). Power is not reserved by default because trading pays far more here`,
       cost: "A$385/kWh all-in: CSIRO GenCost 2025-26, 4-hour battery (A$265 battery + A$120 balance of plant)",
     },
   };
 
   const MARKET_DEFAULTS = {
     sim:    { capex: 250, aug: 150, itc: 0,  res: 20, svc: 8,  capp: 40 },
-    caiso:  { capex: 280, aug: 150, itc: 30, res: 20, svc: 7.2, capp: 60 },
-    de:     { capex: 205, aug: 120, itc: 0,  res: 20, svc: 15.2, capp: 0 },
-    sa:     { capex: 385, aug: 265, itc: 0,  res: 0,  svc: 5.6, capp: 0 },
+    caiso:  { capex: 280, aug: 150, itc: 30, res: 20, svc: SV.caiso.svc, capp: 60 },
+    de:     { capex: 205, aug: 120, itc: 0,  res: 20, svc: SV.de.svc, capp: 0 },
+    sa:     { capex: 385, aug: 265, itc: 0,  res: 0,  svc: SV.sa.svc, capp: 0 },
     upload: { capex: 250, aug: 150, itc: 0,  res: 0,  svc: 0,  capp: 0 },
   };
   // Physical wear per full cycle implied by the lifetime assumptions: new cells for the 20% of
@@ -129,7 +133,27 @@
   // Markets
   // ------------------------------------------------------------------------------------
   const realMarket = (key) => (key === "upload" ? uploaded : REAL[key]);
-  const dayCount = (m) => Math.max(1, Math.floor(m.prices.length / STEPS_PER_DAY) - 1);   // possible 48h windows
+  // Number of 15-minute prices; known from the index even before a market's prices are loaded.
+  const priceCount = (m) => (m.prices ? m.prices.length : (m.days || 0) * STEPS_PER_DAY);
+  const dayCount = (m) => Math.max(1, Math.floor(priceCount(m) / STEPS_PER_DAY) - 1);   // possible 48h windows
+
+  // Real prices are loaded only when a market is opened (assets/data/prices-<market>.js), so the
+  // first visit downloads just the page; the offline cache stores them in the background.
+  const marketLoads = {};
+  const isLoaded = (key) => !!(SIM[key] || key === "upload" || (REAL[key] && REAL[key].prices));
+  function ensureMarket(key) {
+    if (isLoaded(key)) return Promise.resolve();
+    if (!marketLoads[key]) {
+      marketLoads[key] = new Promise((resolve, reject) => {
+        const s = document.createElement("script");
+        s.src = `assets/data/prices-${key}.js`;
+        s.onload = () => (REAL[key] && REAL[key].prices ? resolve() : reject(new Error("no prices")));
+        s.onerror = () => { delete marketLoads[key]; s.remove(); reject(new Error("load failed")); };
+        document.head.appendChild(s);
+      });
+    }
+    return marketLoads[key];
+  }
   // Default 48 hours for a real market: a representative (median-spread) window, not the best one.
   const defaultDay = (key) => { const m = realMarket(key); return m ? Math.min(m.typical || 0, dayCount(m) - 1) : 0; };
 
@@ -210,7 +234,7 @@
   const annualCache = new Map();
   let annualJob = null, annualTimer = 0;
   const BATTERY_KEYS = ["cap", "pw", "wear", "eff", "frag", "lo", "hi", "res", "solar"];
-  const hasYearData = (key) => { const m = realMarket(key); return !!m && m.prices.length >= 28 * STEPS_PER_DAY; };
+  const hasYearData = (key) => { const m = realMarket(key); return !!m && priceCount(m) >= 28 * STEPS_PER_DAY; };
   function annualKey(s) {
     const src = s.p === "upload" && uploaded ? `${uploaded.name}:${uploaded.prices.length}` : "";
     return [s.p, src, ...BATTERY_KEYS.map((k) => s[k]), s.mode, s.fe, s.seed].join("|");
@@ -495,7 +519,7 @@
   function renderCompare(r, c) {
     const aiName = r.useForecast ? "AI (forecast)" : "AI";
     $("compare").innerHTML = `
-      <thead><tr><th></th>
+      <thead><tr><th><span class="sr-only">Measure</span></th>
         <th><span class="dot" style="background:${c.ink}"></span>${aiName}</th>
         <th><span class="dot" style="background:${c.soc}"></span>Hindsight</th>
         <th><span class="dot" style="background:${c.bot}"></span>Bot</th></tr></thead>
@@ -554,7 +578,7 @@
       <div class="kpi"><div class="label">${k.label}</div><div class="value ${k.cls || ""}">${k.value}</div><div class="sub">${k.sub}</div></div>`).join("");
     const c = palette();
     $("annual-compare").innerHTML = `
-      <thead><tr><th></th>
+      <thead><tr><th><span class="sr-only">Measure</span></th>
         <th><span class="dot" style="background:${c.ink}"></span>AI</th>
         <th><span class="dot" style="background:${c.soc}"></span>Hindsight</th>
         <th><span class="dot" style="background:${c.bot}"></span>Bot</th></tr></thead>
@@ -714,7 +738,11 @@
   // ------------------------------------------------------------------------------------
   function hideExplain() { $("explain").hidden = true; }
 
-  function showExplain(t) {
+  // Start of each AI trade (a run of buying or selling), for keyboard navigation between trades.
+  const tradeStarts = (r) => r.ai.modes.reduce((a, m, i) => (m !== IDLE && (i === 0 || r.ai.modes[i - 1] !== m) ? (a.push(i), a) : a), []);
+  let explainT = null;
+
+  function showExplain(t, focus) {
     const r = last;
     const x = E.explainTrade(r.prices, r.w, tradingBattery(state), t);
     if (!x) { hideExplain(); return; }
@@ -754,11 +782,33 @@
     }
     if (x.margin != null && x.margin < 0) notes.push("On its own this step doesn't pay: the plan makes it to set up a better trade later (for example making room to recharge more cheaply), or the forecast it relied on was wrong.");
     notes.push(`The rule-based bot ${bot} at this moment.`);
+    explainT = t;
+    const starts = tradeStarts(r);
+    const prev = starts.filter((s) => s < t).pop(), next = starts.find((s) => s > t);
+    const nav = `<div class="explain-nav">
+        <button type="button" class="link-btn" data-t="${prev == null ? "" : prev}" ${prev == null ? "disabled" : ""}>‹ Previous trade</button>
+        <span class="muted">${starts.filter((s) => s <= t).length || 1} of ${starts.length} trades</span>
+        <button type="button" class="link-btn" data-t="${next == null ? "" : next}" ${next == null ? "disabled" : ""}>Next trade ›</button></div>`;
     $("explain-body").innerHTML = `
-      <div class="explain-lead">${lead}</div>
+      <div class="explain-lead" tabindex="-1">${lead}</div>
       <div class="explain-cells">${cells.map(([k, v, sub, cls]) => `<div><div class="label">${k}</div><div class="value ${cls || ""}">${v}</div><div class="sub">${sub}</div></div>`).join("")}</div>
-      <ul class="explain-notes">${notes.map((n) => `<li>${n}</li>`).join("")}</ul>`;
+      <ul class="explain-notes">${notes.map((n) => `<li>${n}</li>`).join("")}</ul>${nav}`;
     $("explain").hidden = false;
+    $("explain-body").querySelectorAll(".explain-nav button[data-t]").forEach((b) => {
+      b.onclick = () => { if (b.dataset.t !== "") showExplain(+b.dataset.t, true); };
+    });
+    if (focus) $("explain-body").querySelector(".explain-lead").focus();
+  }
+
+  // Describe the main chart for screen readers (the chart itself is a picture).
+  function describeMainChart(r) {
+    const starts = tradeStarts(r);
+    const buys = starts.filter((t) => r.ai.modes[t] === CHARGE).length, sells = starts.length - buys;
+    const lo = Math.min(...r.prices), hi = Math.max(...r.prices);
+    $("chart-main").setAttribute("aria-label",
+      `Electricity price over 48 hours, from ${money(lo)} to ${money(hi)} per MWh, with the battery's charge level. ` +
+      `The AI made ${buys} buying and ${sells} selling runs; net profit ${signedMoney(r.ai.net)}. ` +
+      `Use "Explain the first trade" below the chart to step through each decision.`);
   }
 
   function onChartClick(ev) {
@@ -776,7 +826,7 @@
   function updateDaySelect(r) {
     const sel = $("day-select");
     if (!r.mk.real) { sel.hidden = true; return; }
-    const m = r.mk.meta, days = dayCount(m), key = `${state.p}:${m.prices.length}:${m.start}`;
+    const m = r.mk.meta, days = dayCount(m), key = `${state.p}:${priceCount(m)}:${m.start}`;
     if (sel.dataset.key !== key) {
       const start = parseNaive(m.start);
       sel.innerHTML = Array.from({ length: days }, (_, d) =>
@@ -792,11 +842,27 @@
   let clickBound = false;
 
   function render(upto = N) {
+    if (!isLoaded(state.p)) {                       // fetch this market's prices first
+      const key = state.p;
+      document.body.classList.add("loading-data");
+      $("source").textContent = `Loading ${REAL[key] ? REAL[key].label : ""} prices…`;
+      ensureMarket(key).then(() => {
+        document.body.classList.remove("loading-data");
+        if (kiosk.on) return;                       // auto-play continues on its own
+        scheduleRender();
+      }, () => {
+        document.body.classList.remove("loading-data");
+        toast("Couldn't load the price data. Check the connection and try again.");
+        if (state.p === key) { state.p = DEFAULTS.p; state.d = 0; syncControls(); scheduleRender(); }
+      });
+      return last;
+    }
     const r = simulate(state);
     last = r;
     const c = palette();
     renderKpis(r, upto);
     renderMainChart(r, c, upto, "chart-main");
+    describeMainChart(r);
     renderInsight(r);
     $("source").textContent = sourceText(r);
     renderCompare(r, c);
@@ -865,7 +931,7 @@
 
   function updateOutputs() {
     for (const c of CONTROLS) {
-      const disabled = c.simOnly && !SIM[state.p];
+      const disabled = !!(c.simOnly && !SIM[state.p]);
       $("in-" + c.key).disabled = disabled;
       $("field-" + c.key).classList.toggle("disabled", disabled);
       $("out-" + c.key).textContent = disabled ? "real data" : c.fmt(state[c.key]);
@@ -986,6 +1052,10 @@
     if (!kiosk.on) return;
     const q = kioskQueue();
     const key = q[kiosk.i % q.length];
+    if (!isLoaded(key)) {                            // load a real market's prices, then play it
+      ensureMarket(key).then(playNextMarket, () => { kiosk.i++; playNextMarket(); });
+      return;
+    }
     kiosk.i++;
     state.p = key; state.d = SIM[key] ? 0 : defaultDay(key); state.mode = "forecast";
     if (SIM[key]) { state.seed = SIM[key].seed; state.vol = SIM[key].volatility; }
@@ -1182,7 +1252,7 @@
       </tbody></table>
       <ul class="rp-notes">
         <li>${annualNote}</li>
-        <li>${r.stack && (r.stack.services || r.stack.capacity) ? `Grid services at ${CUR}${state.svc} per MW per hour${MARKET_INFO[state.p] && state.svc === MARKET_DEFAULTS[state.p].svc ? " (2025 market average)" : ""}; capacity payments are an assumption.` : "Energy arbitrage only; grid services and capacity payments are not included."}${MARKET_INFO[state.p] && state.capex === MARKET_DEFAULTS[state.p].capex ? ` Installed cost: ${esc(MARKET_INFO[state.p].cost)}.` : ""} Lifetime: health falls 20% over ${state.clife.toLocaleString("en-US")} cycles plus 1% a year; new cells at ${CUR}${state.aug}/kWh below 80% health; O&amp;M 1.5% of installed cost a year; ${state.itc ? `${state.itc}% investment tax credit on the installed cost; no other tax` : "no tax"} or financing.</li>
+        <li>${r.stack && (r.stack.services || r.stack.capacity) ? `Grid services at ${CUR}${state.svc} per MW per hour${MARKET_INFO[state.p] && state.svc === MARKET_DEFAULTS[state.p].svc ? " (${SV.year} market average)" : ""}; capacity payments are an assumption.` : "Energy arbitrage only; grid services and capacity payments are not included."}${MARKET_INFO[state.p] && state.capex === MARKET_DEFAULTS[state.p].capex ? ` Installed cost: ${esc(MARKET_INFO[state.p].cost)}.` : ""} Lifetime: health falls 20% over ${state.clife.toLocaleString("en-US")} cycles plus 1% a year; new cells at ${CUR}${state.aug}/kWh below 80% health; O&amp;M 1.5% of installed cost a year; ${state.itc ? `${state.itc}% investment tax credit on the installed cost; no other tax` : "no tax"} or financing.</li>
         <li>Battery wear is charged at the stated cost per full cycle. Forecast error is simulated on top of actual prices.</li>
         <li>Illustrative estimate, not a financial forecast or investment advice.</li>
       </ul>
@@ -1211,7 +1281,10 @@
     $("btn-share").addEventListener("click", share);
     $("btn-present").addEventListener("click", togglePresent);
     $("btn-shuffle").addEventListener("click", newDay);
+    const dataYear = (Object.values(REAL)[0] || {}).year;
+    if (dataYear) document.querySelectorAll(".data-year").forEach((el) => { el.textContent = dataYear; });
     $("btn-theme").addEventListener("click", toggleTheme);
+    $("explain-first").addEventListener("click", () => { const s = last && tradeStarts(last); if (s && s.length) showExplain(s[0], true); });
     $("btn-play").addEventListener("click", () => (kiosk.on ? stopKiosk() : startKiosk()));
     $("btn-report").addEventListener("click", openReportDialog);
     $("day-select").addEventListener("change", (e) => { state.d = parseInt(e.target.value, 10) || 0; scheduleRender(); });

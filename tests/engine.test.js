@@ -10,6 +10,7 @@ const E = require(path.join(__dirname, "..", "assets", "engine.js"))();
 global.window = {};
 require(path.join(__dirname, "..", "assets", "data", "markets.js"));
 const MARKETS = global.window.GRID_MARKETS;
+for (const key of Object.keys(MARKETS)) require(path.join(__dirname, "..", "assets", "data", `prices-${key}.js`));
 
 const DEFAULT_BATTERY = { cap: 100, pw: 25, wear: 3000, eff: 88, frag: 300, lo: 10, hi: 90 };
 const SCENARIOS = {
