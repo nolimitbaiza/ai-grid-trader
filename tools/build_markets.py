@@ -1,100 +1,124 @@
-"""Convert downloaded public price data into a bundled 15-minute JS data file for the demo.
+"""Build assets/data/markets.js: a full calendar year (2025) of real prices per market, 15-minute steps.
 
-Usage: python build_markets.py <download_dir> <output assets/data/markets.js>
+Usage: python tools/build_markets.py <download_dir> [assets/data/markets.js]
 
-Expected downloads in <download_dir>:
-  de.json     https://api.energy-charts.info/price?bzn=DE-LU&start=2025-05-01&end=2025-05-31
-  sa.csv      https://aemo.com.au/aemo/data/nem/priceanddemand/PRICE_AND_DEMAND_202509_SA1.csv
-  caiso.zip   https://oasis.caiso.com/oasisapi/SingleZip?queryname=PRC_LMP&startdatetime=20250501T07:00-0000
-              &enddatetime=20250521T07:00-0000&version=1&market_run_id=DAM&node=TH_SP15_GEN-APND&resultformat=6
+Downloads expected in <download_dir> (all public):
+  Germany (Energy-Charts / SMARD, CC BY 4.0), one file per quarter:
+    de_2025-01-01.json  https://api.energy-charts.info/price?bzn=DE-LU&start=2025-01-01&end=2025-03-31
+    de_2025-04-01.json  ...&start=2025-04-01&end=2025-06-30
+    de_2025-07-01.json  ...&start=2025-07-01&end=2025-09-30
+    de_2025-10-01.json  ...&start=2025-10-01&end=2026-01-01
+  South Australia (AEMO), one file per month:
+    sa_01.csv ... sa_12.csv  https://aemo.com.au/aemo/data/nem/priceanddemand/PRICE_AND_DEMAND_2025MM_SA1.csv
+  California (CAISO OASIS, SP15 hub, day-ahead), any number of zips covering 2025 (each request < 31 days):
+    caiso_*.zip  https://oasis.caiso.com/oasisapi/SingleZip?queryname=PRC_LMP&startdatetime=20250101T08:00-0000
+                 &enddatetime=20250201T08:00-0000&version=1&market_run_id=DAM&node=TH_SP15_GEN-APND&resultformat=6
+
+Times are converted to each market's *standard* time all year (no daylight-saving jumps), so every
+day has exactly 96 quarter-hours. Germany switched from hourly to 15-minute day-ahead prices on
+1 Oct 2025; hourly prices are repeated across their four quarter-hours.
 """
-import csv, io, json, sys, zipfile
+import csv
+import glob
+import io
+import json
+import sys
+import zipfile
 from datetime import datetime, timedelta, timezone
-from zoneinfo import ZoneInfo
+from pathlib import Path
 
-src = sys.argv[1]
-out = sys.argv[2]
-DAYS = 7
+SRC = Path(sys.argv[1])
+OUT = Path(sys.argv[2]) if len(sys.argv) > 2 else Path(__file__).resolve().parent.parent / "assets" / "data" / "markets.js"
+YEAR = 2025
+START = datetime(YEAR, 1, 1)
+STEPS = 365 * 96
+Q = timedelta(minutes=15)
 
 
-def to15(series):
-    """series: list of (naive_local_datetime_interval_start, price, minutes). Return dict start->price at 15-min."""
+def to_grid(points):
+    """points: list of (naive standard-time start, price, minutes). Returns 35,040 quarter-hour prices + fill count."""
     buckets = {}
-    for ts, p, minutes in series:
-        if minutes >= 15:
-            for k in range(minutes // 15):
-                buckets.setdefault(ts + timedelta(minutes=15 * k), []).append(p)
+    for ts, price, minutes in points:
+        for k in range(max(1, minutes // 15)):                    # coarse data: repeat per quarter-hour
+            t = ts + k * Q
+            buckets.setdefault(t - timedelta(minutes=t.minute % 15), []).append(price)
+    grid, filled, last = [], 0, None
+    for i in range(STEPS):
+        t = START + i * Q
+        if t in buckets:
+            last = sum(buckets[t]) / len(buckets[t])
         else:
-            b = ts - timedelta(minutes=ts.minute % 15)
-            buckets.setdefault(b, []).append(p)
-    return {k: sum(v) / len(v) for k, v in sorted(buckets.items())}
+            filled += 1
+            if last is None:                                      # leading gap: use the first value
+                last = next(sum(v) / len(v) for k, v in sorted(buckets.items()) if k >= START)
+        grid.append(round(last, 1))
+    return grid, filled
 
 
-def pick_week(grid, cap):
-    """Return (avg daily spread, start, 15-min prices) for the median-spread 7-day window."""
-    days = sorted({k.date() for k in grid})
-    candidates = []
-    for i in range(len(days) - DAYS + 1):
-        window = days[i:i + DAYS]
-        start = datetime.combine(window[0], datetime.min.time())
-        keys = [start + timedelta(minutes=15 * j) for j in range(DAYS * 96)]
-        if not all(k in grid for k in keys):
-            continue
-        vals = [grid[k] for k in keys]
-        if max(vals) > cap:
-            continue
-        spread = sum(max(vals[d * 96:(d + 1) * 96]) - min(vals[d * 96:(d + 1) * 96]) for d in range(DAYS)) / DAYS
-        candidates.append((spread, start, vals))
-    # A typical week, not the best one: pick the median average daily spread,
-    # so annualised results are not inflated by cherry-picking.
-    candidates.sort(key=lambda c: c[0])
-    return candidates[len(candidates) // 2]
+def typical_day(grid):
+    """Start day of the median-spread 48-hour window: a representative default, not a cherry-picked one."""
+    spreads = []
+    for d in range(364):
+        w = grid[d * 96:(d + 2) * 96]
+        spreads.append((max(w) - min(w), d))
+    spreads.sort()
+    return spreads[len(spreads) // 2][1]
 
 
 markets = {}
 
-# --- Germany (Energy-Charts / SMARD, CC BY 4.0) ---
-de = json.load(open(f"{src}/de.json"))
-berlin = ZoneInfo("Europe/Berlin")
-ts = de["unix_seconds"]
-step = (ts[1] - ts[0]) // 60
-series = [(datetime.fromtimestamp(t, timezone.utc).astimezone(berlin).replace(tzinfo=None), p, step)
-          for t, p in zip(ts, de["price"]) if p is not None]
-spread, start, vals = pick_week(to15(series), cap=400)
+# ---- Germany: Energy-Charts, unix seconds -> CET (UTC+1) standard time
+points = []
+for f in sorted(glob.glob(str(SRC / "de_*.json"))):
+    js = json.load(open(f))
+    ts = js["unix_seconds"]
+    for i, (t, p) in enumerate(zip(ts, js["price"])):
+        if p is None:
+            continue
+        step = (ts[i + 1] - t) // 60 if i + 1 < len(ts) else (t - ts[i - 1]) // 60
+        local = datetime.fromtimestamp(t, timezone.utc).replace(tzinfo=None) + timedelta(hours=1)
+        points.append((local, p, int(step)))
+grid, filled = to_grid(points)
 markets["de"] = dict(label="Germany", name="Germany-Luxembourg day-ahead", currency="€", unit="EUR/MWh",
-                     tz="CET/CEST (local time)", source="Bundesnetzagentur | SMARD.de via Energy-Charts (CC BY 4.0)",
-                     start=start.strftime("%Y-%m-%d %H:%M"), prices=[round(v, 2) for v in vals])
-print("de", start, round(spread, 1), min(vals), max(vals), "native step", step)
+                     tz="CET, UTC+1 all year", source="Bundesnetzagentur | SMARD.de via Energy-Charts (CC BY 4.0)")
+markets["de"].update(start=START.strftime("%Y-%m-%d %H:%M"), year=YEAR, typical=typical_day(grid), prices=grid)
+print("de", len(points), "points, filled", filled, "min", min(grid), "max", max(grid))
 
-# --- South Australia (AEMO NEM, 5-minute dispatch prices, times are AEST interval-ending) ---
-rows = list(csv.DictReader(open(f"{src}/sa.csv")))
-series = [(datetime.strptime(r["SETTLEMENTDATE"], "%Y/%m/%d %H:%M:%S") - timedelta(minutes=5), float(r["RRP"]), 5)
-          for r in rows]
-spread, start, vals = pick_week(to15(series), cap=1000)
+# ---- South Australia: AEMO 5-minute dispatch prices, market time AEST (UTC+10, no DST), interval-ending
+points = []
+for f in sorted(glob.glob(str(SRC / "sa_*.csv"))):
+    for r in csv.DictReader(open(f)):
+        end = datetime.strptime(r["SETTLEMENTDATE"], "%Y/%m/%d %H:%M:%S")
+        points.append((end - timedelta(minutes=5), float(r["RRP"]), 5))
+grid, filled = to_grid(points)
 markets["sa"] = dict(label="South Australia", name="NEM South Australia (SA1) spot", currency="A$", unit="AUD/MWh",
-                     tz="AEST (market time)", source="Australian Energy Market Operator (AEMO)",
-                     start=start.strftime("%Y-%m-%d %H:%M"), prices=[round(v, 2) for v in vals])
-print("sa", start, round(spread, 1), min(vals), max(vals))
+                     tz="AEST market time, UTC+10", source="Australian Energy Market Operator (AEMO)")
+markets["sa"].update(start=START.strftime("%Y-%m-%d %H:%M"), year=YEAR, typical=typical_day(grid), prices=grid)
+print("sa", len(points), "points, filled", filled, "min", min(grid), "max", max(grid))
 
-# --- California (CAISO OASIS, SP15 trading hub, day-ahead hourly LMP) ---
-z = zipfile.ZipFile(f"{src}/caiso.zip")
-rows = list(csv.DictReader(io.TextIOWrapper(z.open(z.namelist()[0]))))
-la = ZoneInfo("America/Los_Angeles")
-series = []
-for r in rows:
-    if r["LMP_TYPE"] != "LMP":
+# ---- California: CAISO OASIS day-ahead hourly LMP, GMT -> PST (UTC-8) standard time
+points, seen = [], set()
+for f in sorted(glob.glob(str(SRC / "caiso_*.zip"))):
+    z = zipfile.ZipFile(f)
+    name = z.namelist()[0]
+    if not name.endswith(".csv"):
+        print("  skipping (not data):", f)
         continue
-    t = datetime.fromisoformat(r["INTERVALSTARTTIME_GMT"].replace("Z", "+00:00")).astimezone(la).replace(tzinfo=None)
-    series.append((t, float(r["MW"]), 60))
-spread, start, vals = pick_week(to15(series), cap=300)
+    for r in csv.DictReader(io.TextIOWrapper(z.open(name))):
+        if r["LMP_TYPE"] != "LMP" or r["INTERVALSTARTTIME_GMT"] in seen:
+            continue
+        seen.add(r["INTERVALSTARTTIME_GMT"])
+        t = datetime.fromisoformat(r["INTERVALSTARTTIME_GMT"].replace("Z", "+00:00")).astimezone(timezone.utc).replace(tzinfo=None)
+        points.append((t - timedelta(hours=8), float(r["MW"]), 60))
+grid, filled = to_grid(points)
 markets["caiso"] = dict(label="California", name="CAISO SP15 trading hub, day-ahead", currency="$", unit="USD/MWh",
-                        tz="Pacific time", source="California ISO OASIS",
-                        start=start.strftime("%Y-%m-%d %H:%M"), prices=[round(v, 2) for v in vals])
-print("caiso", start, round(spread, 1), min(vals), max(vals))
+                        tz="PST, UTC−8 all year", source="California ISO OASIS")
+markets["caiso"].update(start=START.strftime("%Y-%m-%d %H:%M"), year=YEAR, typical=typical_day(grid), prices=grid)
+print("caiso", len(points), "points, filled", filled, "min", min(grid), "max", max(grid))
 
 order = ["caiso", "de", "sa"]
-with open(out, "w", encoding="utf-8") as f:
-    f.write("/* Real historical wholesale prices, resampled to 15-minute steps (7 days each).\n")
-    f.write("   Generated by tools/build_markets.py. Sources and licences listed per market. */\n")
+with open(OUT, "w", encoding="utf-8") as f:
+    f.write(f"/* Real wholesale prices for calendar year {YEAR}, 15-minute steps, standard time.\n")
+    f.write("   Generated by tools/build_markets.py. Sources and licences are listed per market. */\n")
     f.write("window.GRID_MARKETS = " + json.dumps({k: markets[k] for k in order}, ensure_ascii=False, separators=(",", ":")) + ";\n")
-print("wrote", out)
+print("wrote", OUT, f"{OUT.stat().st_size / 1024:.0f} KB")

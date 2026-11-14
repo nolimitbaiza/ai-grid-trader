@@ -55,23 +55,40 @@ The **Of hindsight maximum** figure compares that with *perfect hindsight*, an a
 every future price: the most any strategy could have earned. This is the number a technical
 buyer will ask for.
 
-## Real market data
+## Real market data: a full year
 
-Bundled: one typical week (the median-spread week of the month, not the best one) from each of:
+Bundled: the **whole of 2025** (365 days, 15-minute steps) for each market:
 
 | Market | Prices | Source |
 |---|---|---|
-| California | CAISO SP15 trading hub, day-ahead, May 2025 (USD) | [CAISO OASIS](https://oasis.caiso.com) |
-| Germany | Germany-Luxembourg day-ahead, May 2025 (EUR) | Bundesnetzagentur / SMARD.de via [Energy-Charts](https://energy-charts.info), CC BY 4.0 |
-| South Australia | NEM SA1 spot, September 2025 (AUD) | [AEMO](https://aemo.com.au) |
+| California | CAISO SP15 trading hub, day-ahead (USD) | [CAISO OASIS](https://oasis.caiso.com) |
+| Germany | Germany-Luxembourg day-ahead (EUR) | Bundesnetzagentur / SMARD.de via [Energy-Charts](https://energy-charts.info), CC BY 4.0 |
+| South Australia | NEM SA1 spot (AUD) | [AEMO](https://aemo.com.au) |
 
-All are resampled to 15-minute steps. `tools/build_markets.py` rebuilds `assets/data/markets.js`
-from the downloads (the URLs are in the script).
+Times are each market's standard time all year (no daylight-saving jumps). Hourly prices are
+repeated across their quarter-hours. `tools/build_markets.py` rebuilds `assets/data/markets.js`
+from the public downloads (the URLs are in the script).
+
+**Full-year results.** For a real market, the page runs the same agent through all 8,760 hours
+of 2025 in the background (a few seconds): it re-plans every hour on a forecast with a
+24-hour look-ahead and is scored on actual prices. The *Of hindsight maximum* figure compares it
+with one optimisation over the whole year on actual prices, the most any strategy could earn.
+Annual revenue, ROI and payback come from this, not from scaling up 48 hours, and the monthly chart
+shows the seasonality. With the default 100 MWh / 25 MW battery on 2025 prices:
+
+| Market | AI net revenue | Of hindsight max | Annual ROI |
+|---|---|---|---|
+| California | $270k | 82% | 0.9% |
+| Germany | €1.84M | 93% | 6.1% |
+| South Australia | A$7.31M | 93% | 24.4% |
+
+The 48-hour chart opens on a representative window (the median price spread of the year), not a
+cherry-picked one; any other day can be picked from the date menu.
 
 ### Uploading a CSV
 
 Any CSV with a price column works, ideally with a timestamp column; 5, 15, 30 or 60-minute data,
-at least 48 hours. Comma or semicolon separated, decimal points or commas. The file is processed
+at least 48 hours (up to a year is used; four weeks or more also gets the full-year view, scaled to 365 days). Comma or semicolon separated, decimal points or commas. The file is processed
 only in the visitor's browser and never uploaded. Uploaded data isn't included in Share links.
 
 ```
@@ -119,16 +136,37 @@ computed in milliseconds and reproducible every time.
 It is benchmarked against perfect hindsight and a rule-based bot (buy below the 3-hour average,
 sell above it), all scored with the same accounting.
 
-> Results are illustrative and cover energy arbitrage only. Annual figures scale a 48-hour
-> window to a year. Forecast error is simulated.
+> Results are illustrative and cover energy arbitrage only. For real markets, annual figures
+> come from simulating all of 2025; for the simulated scenarios they scale a 48-hour window.
+> Forecast error is simulated. Past prices don't guarantee future revenue.
+
+## Tests
+
+`tests/engine.test.js` checks the model with Node's built-in test runner (no installs):
+
+```bash
+node --test tests/engine.test.js
+```
+
+- The battery never leaves its allowed charge window or exceeds its power rating.
+- Perfect hindsight always does at least as well as the forecast-driven AI.
+- With a 0% forecast error, the AI matches perfect hindsight exactly.
+- Forecasts get worse as the error setting grows.
+- Accounting adds up: cycles, cumulative and step profits, revenue minus wear.
+- Full year: hindsight is the maximum, limits hold, months add up to the year.
+- The bundled data is a complete year; CSV uploads in common formats parse correctly.
+
+GitHub runs these on every push (see the **Actions** tab). `tools/browser_check.py` is a separate
+cross-browser check of the page itself (Chromium, Firefox, WebKit, iPad, offline).
 
 ## Repository layout
 
 ```
 index.html                  The demo page (served by GitHub Pages)
-assets/app.js               Markets, RL agent, forecast mode, benchmarks, charts, kiosk, PDF
+assets/engine.js            The model: markets, RL agent, forecasts, benchmarks, accounting, full year
+assets/app.js               The page: controls, charts, full-year worker, kiosk, PDF, sharing
 assets/style.css            Minimal light/dark theme and the printable business case
-assets/data/markets.js      Real historical prices (15-minute)
+assets/data/markets.js      Real prices for all of 2025 (15-minute)
 assets/vendor/              Plotly.js (bundled for offline use)
 assets/img/                 Profile photo and LinkedIn QR code
 assets/icons/, manifest.webmanifest, sw.js   Installable app + offline cache
@@ -137,20 +175,34 @@ tools/build_markets.py      Rebuilds the real-price data file
 tools/build_assets.py       Rebuilds the app icons and QR code
 tools/build_og.py           Rebuilds the link-preview image
 tools/browser_check.py      Cross-browser smoke test (Chromium, Firefox, WebKit, iPad, offline)
-streamlit_app/              Full analyst dashboard in Python (Streamlit)
+tests/engine.test.js        Automated model tests; .github/workflows/test.yml runs them
+streamlit_app/              Earlier analyst prototype in Python (Streamlit)
+LICENSE.md                  PolyForm Noncommercial 1.0.0
 ```
 
 To swap the profile photo, replace `assets/img/profile.jpg` (square, about 400×400). Until it
 exists the page shows the initials "BI". After publishing changes, visitors who already opened
 the demo get the new version on their next visit.
 
-## Analyst dashboard (Python)
+## Earlier analyst prototype (Python)
 
-A deeper Streamlit version (simulated prices, perfect foresight) with a decision log, CSV export
-and a heatmap of the learned policy:
+`streamlit_app/` is the **original Streamlit prototype, kept for reference**. It uses simulated
+prices and a perfect-foresight agent only, so its numbers are not comparable with the web demo,
+which is the main product. It still offers a decision log with CSV export and a heatmap of the
+learned policy:
 
 ```bash
 cd streamlit_app
 pip install -r requirements.txt
 python -m streamlit run app.py
 ```
+
+## License
+
+**PolyForm Noncommercial 1.0.0** (see [LICENSE.md](LICENSE.md)). You may use, study and modify
+this code for non-commercial purposes such as learning, research and personal projects.
+**Commercial use requires a separate license**: contact Baizak Isaev at baizakisaev@gmail.com or on
+[LinkedIn](https://www.linkedin.com/in/baizakisaev/).
+
+Third-party parts keep their own terms: Plotly.js (`assets/vendor/`, MIT license) and the market
+data (each source's terms; the German data is CC BY 4.0, Bundesnetzagentur | SMARD.de).

@@ -4,12 +4,13 @@
  * (handy at venues with bad Wi-Fi). Files are served from the cache instantly and refreshed in
  * the background, so a new version shows up on the next visit after it is published.
  */
-const CACHE = "agt-v2";
+const CACHE = "agt-v3";
 const ASSETS = [
   "./",
   "index.html",
   "manifest.webmanifest",
   "assets/style.css",
+  "assets/engine.js",
   "assets/app.js",
   "assets/data/markets.js",
   "assets/vendor/plotly-basic-2.35.2.min.js",

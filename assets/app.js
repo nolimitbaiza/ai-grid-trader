@@ -1,45 +1,26 @@
 /*
- * AI Grid Trader: browser edition.
+ * AI Grid Trader: the page (controls, charts, presenting tools).
  *
- * Runs entirely in the visitor's browser (no server), so it can be hosted on any static
- * website or GitHub Pages, embedded in an iframe, or opened straight from disk offline.
+ * The model itself (markets, the RL agent, forecasts, benchmarks, accounting, the full-year
+ * simulation and CSV parsing) lives in assets/engine.js as window.GridEngine, so it can also run
+ * in a background worker and in the automated tests.
  *
- *   1. MARKET    simulated 48h prices, real historical prices (assets/data/markets.js),
- *                or a CSV the visitor uploads (processed locally, never sent anywhere)
- *   2. AI AGENT  exact Bellman backups over (time, state of charge, operating mode): the
- *                decision table a fully trained Q-learning agent converges to.
- *                Forecast mode: the agent only sees a noisy forecast, re-plans every hour
- *                (model-predictive control) and is scored on the actual prices.
- *   3. BENCHMARKS  perfect hindsight (theoretical maximum) and a rule-based bot
- *   4. LEDGER    one shared accounting of cash, battery wear and cycles for everyone
- *
- * Extras for presenting: kiosk auto-play, shareable links, a printable business case,
- * and a light/dark switch.
- *
- * Reward per step = arbitrage cash − battery wear − penalty for starting a new trade run.
+ * Runs entirely in the visitor's browser (no server): host it anywhere, embed it, or open it from disk.
  */
 (function () {
   "use strict";
 
-  // ------------------------------------------------------------------------------------
-  // Constants & configuration
-  // ------------------------------------------------------------------------------------
-  const STEPS_PER_HOUR = 4;
-  const DT = 1 / STEPS_PER_HOUR;          // hours per interval
-  const N = 48 * STEPS_PER_HOUR;          // 192 decision points (48 hours)
-  const NEG = -1e12;                      // value of an impossible state
-  const IDLE = 0, CHARGE = 1, DISCHARGE = 2;
-  const BASE_PRICE = 42;                  // $/MWh off-peak level for simulated markets
-  const DAY_MS = 864e5, STEP_MS = DT * 3600e3;
+  const E = window.GridEngine;
+  const { N, DT, IDLE, CHARGE, DISCHARGE, DAY_MS, STEP_MS, STEPS_PER_DAY } = E;
 
-  // Simulated scenarios.
+  // Simulated scenarios (48 hours each).
   const SIM = {
     typical:  { label: "Typical day",   seed: 42, volatility: 5,  morning: 38, evening: 75,  solar: 34, spikes: [1, 3], spikeSize: [25, 80] },
     volatile: { label: "Volatile",      seed: 7,  volatility: 11, morning: 38, evening: 75,  solar: 34, spikes: [3, 5], spikeSize: [40, 120] },
     solar:    { label: "Solar surplus", seed: 21, volatility: 5,  morning: 30, evening: 70,  solar: 72, spikes: [0, 1], spikeSize: [20, 50] },
     heatwave: { label: "Heatwave",      seed: 99, volatility: 7,  morning: 50, evening: 140, solar: 25, spikes: [2, 4], spikeSize: [50, 120] },
   };
-  // Real historical markets, bundled as 15-minute series (see tools/build_markets.py).
+  // Real markets: a full calendar year of 15-minute prices each (see tools/build_markets.py).
   const REAL = window.GRID_MARKETS || {};
   let uploaded = null;                    // a market built from the visitor's CSV
 
@@ -57,8 +38,6 @@
   const money = (v) => (v < 0 ? "−" : "") + CUR + fmtNum(v);
   const signedMoney = (v) => (v >= 0 ? "+" : "−") + CUR + fmtNum(v);
   const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
-  const mean = (a) => a.reduce((s, v) => s + v, 0) / a.length;
-  const std = (a) => { const m = mean(a); return Math.sqrt(a.reduce((s, v) => s + (v - m) ** 2, 0) / a.length); };
 
   // Slider definitions. `main` sliders are always visible; the rest sit under "More settings".
   const CONTROLS = [
@@ -74,393 +53,130 @@
     { key: "hi",    label: "Highest charge level",  min: 55,  max: 100,   step: 5,   fmt: (v) => `${v}%` },
   ];
 
-  const DEFAULTS = { p: "typical", d: 0, mode: "forecast", cap: 100, pw: 25, wear: 3000, fe: 20, vol: 5,
+  const DEFAULTS = { p: "typical", d: null, mode: "forecast", cap: 100, pw: 25, wear: 3000, fe: 20, vol: 5,
                      eff: 88, frag: 300, capex: 300, lo: 10, hi: 90, seed: 42 };
 
   // ------------------------------------------------------------------------------------
-  // Dates: every timestamp is "market local time", handled as naive UTC so the
-  // visitor's own time zone never shifts the chart.
+  // Dates (market local time, handled as naive UTC)
   // ------------------------------------------------------------------------------------
   const pad = (n) => String(n).padStart(2, "0");
   const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const MO = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  function parseNaive(s) {
-    const [d, t = "00:00"] = s.split(" ");
-    const [Y, M, D] = d.split("-").map(Number);
-    const [h, mi] = t.split(":").map(Number);
-    return Date.UTC(Y, M - 1, D, h, mi);
-  }
-  function fmtNaive(ms) {
-    const d = new Date(ms);
-    return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
-  }
+  const parseNaive = E.parseNaive, fmtNaive = E.fmtNaive;
   const fmtDay = (ms) => { const d = new Date(ms); return `${WD[d.getUTCDay()]} ${d.getUTCDate()} ${MO[d.getUTCMonth()]} ${d.getUTCFullYear()}`; };
   const fmtShortDay = (ms) => { const d = new Date(ms); return `${WD[d.getUTCDay()]} ${d.getUTCDate()} ${MO[d.getUTCMonth()]}`; };
   const fmtClock = (ms) => { const d = new Date(ms); return `${WD[d.getUTCDay()]} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`; };
-  function todayMs() { const n = new Date(); return Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()); }
 
   // ------------------------------------------------------------------------------------
-  // 1. Markets
+  // Markets
   // ------------------------------------------------------------------------------------
-  function mulberry32(seed) {
-    let a = seed >>> 0;
-    return function () {
-      a = (a + 0x6d2b79f5) | 0;
-      let t = Math.imul(a ^ (a >>> 15), 1 | a);
-      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-  }
-  function gaussian(rng) {
-    let u = 0;
-    while (u === 0) u = rng();
-    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rng());
-  }
-  const bump = (h, center, width, height) => height * Math.exp(-0.5 * ((h - center) / width) ** 2);
-
-  // Simulated "duck curve" market: morning + evening peaks, midday solar dip, noise, spikes.
-  function generateMarket(m) {
-    const rng = mulberry32(m.seed);
-    const day2Scale = 0.9 + 0.3 * rng();
-    const price = new Float64Array(N);
-    const eveningIdx = [];
-    let noise = 0;
-    for (let t = 0; t < N; t++) {
-      const hod = (t * DT) % 24;
-      let shape = BASE_PRICE
-        + bump(hod, 8, 1.6, m.morning)
-        + bump(hod, 19, 2.0, m.evening)
-        - bump(hod, 13, 2.4, m.solar)
-        - bump(hod, 3.5, 2.2, 12);
-      if (t * DT >= 24) shape *= day2Scale;
-      noise = t === 0 ? 0 : 0.8 * noise + m.volatility * gaussian(rng);
-      price[t] = shape + noise;
-      if (hod >= 17 && hod <= 21) eveningIdx.push(t);
-    }
-    const count = m.spikes[0] + Math.floor(rng() * (m.spikes[1] - m.spikes[0] + 1));
-    for (let k = 0; k < count; k++) {
-      const start = eveningIdx[Math.floor(rng() * eveningIdx.length)];
-      const len = 2 + Math.floor(rng() * 3);
-      const size = m.spikeSize[0] + rng() * (m.spikeSize[1] - m.spikeSize[0]);
-      for (let t = start; t < Math.min(N, start + len); t++) price[t] += size;
-    }
-    for (let t = 0; t < N; t++) price[t] = Math.max(price[t], -25);
-    return price;
-  }
-
   const realMarket = (key) => (key === "upload" ? uploaded : REAL[key]);
-  const dayCount = (m) => Math.max(1, Math.floor(m.prices.length / 96) - 1);   // possible 48h windows
+  const dayCount = (m) => Math.max(1, Math.floor(m.prices.length / STEPS_PER_DAY) - 1);   // possible 48h windows
+  // Default 48 hours for a real market: a representative (median-spread) window, not the best one.
+  const defaultDay = (key) => { const m = realMarket(key); return m ? Math.min(m.typical || 0, dayCount(m) - 1) : 0; };
 
   // The 48 hours of prices to trade, plus labels for the chosen market.
   function marketFor(state) {
     const sim = SIM[state.p];
     if (sim) {
       return {
-        prices: generateMarket({ ...sim, seed: state.seed, volatility: state.vol }),
-        startMs: todayMs(), currency: "$", label: sim.label, real: false,
+        prices: E.generateMarket({ ...sim, seed: state.seed, volatility: state.vol }),
+        startMs: E.todayMs(), currency: "$", label: sim.label, real: false,
       };
     }
     const m = realMarket(state.p);
     const d = Math.min(Math.max(0, state.d | 0), dayCount(m) - 1);
     return {
-      prices: Float64Array.from(m.prices.slice(d * 96, d * 96 + N)),
+      prices: Float64Array.from(m.prices.slice(d * STEPS_PER_DAY, d * STEPS_PER_DAY + N)),
       startMs: parseNaive(m.start) + d * DAY_MS, currency: m.currency, label: m.label, real: true, meta: m, d,
-    };
-  }
-
-  // ------------------------------------------------------------------------------------
-  // 2. Battery state-of-charge grid: full power for one interval = whole number of steps
-  // ------------------------------------------------------------------------------------
-  function socGrid(b) {
-    const eMax = Math.min(b.pw * DT, b.cap);
-    const J = Math.max(1, Math.round(eMax / (b.cap / 100)));
-    const delta = eMax / J;
-    const S = Math.floor(b.cap / delta + 1e-9) + 1;
-    const lo = Math.max(0, Math.ceil((b.lo / 100) * b.cap / delta - 1e-9));
-    let hi = Math.min(S - 1, Math.floor((b.hi / 100) * b.cap / delta + 1e-9));
-    if (hi <= lo) hi = Math.min(S - 1, lo + 1);
-    const startPct = Math.min(Math.max(50, b.lo), b.hi);
-    const s0 = Math.min(hi, Math.max(lo, Math.round((startPct / 100) * b.cap / delta)));
-    return { delta, S, J, lo, hi, s0 };
-  }
-
-  // ------------------------------------------------------------------------------------
-  // 3. The AI agent: converged Q-values via backward induction (Bellman optimality).
-  //    Returns the optimal action (signed grid steps) for every (time, SOC, mode).
-  // ------------------------------------------------------------------------------------
-  function solve(prices, b, g, terminalPrice, keepSteps) {
-    const T = prices.length, S = g.S, J = g.J;
-    const eta = Math.sqrt(b.eff / 100);
-    const wearPerMWh = b.wear / (2 * b.cap);
-    const rc = new Float64Array(J + 1), rd = new Float64Array(J + 1);
-    let V = new Float64Array(S * 3).fill(NEG);
-    let Vn = new Float64Array(S * 3);
-
-    // Terminal value: finish at least as full as the battery started; surplus is worth the average price.
-    for (let s = Math.max(g.lo, g.s0); s <= g.hi; s++) {
-      const v = (s - g.s0) * g.delta * terminalPrice;
-      V[s * 3] = V[s * 3 + 1] = V[s * 3 + 2] = v;
-    }
-
-    const keep = Math.min(T, keepSteps == null ? T : keepSteps);
-    const policy = new Int16Array(keep * S * 3);
-    for (let t = T - 1; t >= 0; t--) {
-      const p = prices[t];
-      for (let j = 1; j <= J; j++) {
-        const e = j * g.delta;
-        rc[j] = (-p * e) / eta - e * wearPerMWh;      // pay to charge, plus wear
-        rd[j] = p * e * eta - e * wearPerMWh;         // paid to discharge, minus wear
-      }
-      Vn.fill(NEG);
-      for (let s = g.lo; s <= g.hi; s++) {
-        const hold = V[s * 3 + IDLE];
-        let bestC = NEG, jC = 0;
-        const maxC = Math.min(J, g.hi - s);
-        for (let j = 1; j <= maxC; j++) { const q = rc[j] + V[(s + j) * 3 + CHARGE]; if (q > bestC) { bestC = q; jC = j; } }
-        let bestD = NEG, jD = 0;
-        const maxD = Math.min(J, s - g.lo);
-        for (let j = 1; j <= maxD; j++) { const q = rd[j] + V[(s - j) * 3 + DISCHARGE]; if (q > bestD) { bestD = q; jD = -j; } }
-        // Starting a new charge/discharge run (from a different mode) pays the micro-cycling penalty.
-        for (let m = 0; m < 3; m++) {
-          let best = hold, act = 0;
-          const qC = bestC - (m === CHARGE ? 0 : b.frag);
-          if (jC && qC > best) { best = qC; act = jC; }
-          const qD = bestD - (m === DISCHARGE ? 0 : b.frag);
-          if (jD && qD > best) { best = qD; act = jD; }
-          Vn[s * 3 + m] = best;
-          if (t < keep) policy[(t * S + s) * 3 + m] = act;
-        }
-      }
-      const tmp = V; V = Vn; Vn = tmp;
-    }
-    return { policy, S };
-  }
-
-  // Execute `steps` decisions of a plan from (s, m), writing into moves/soc at `offset`.
-  function rollout(plan, g, steps, s, m, moves, soc, offset) {
-    for (let k = 0; k < steps; k++) {
-      const j = plan.policy[(k * plan.S + s) * 3 + m];
-      s += j;
-      m = j > 0 ? CHARGE : j < 0 ? DISCHARGE : IDLE;
-      moves[offset + k] = j * g.delta;
-      soc[offset + k] = s * g.delta;
-    }
-    return { s, m };
-  }
-
-  // Perfect hindsight: plans on the actual prices (theoretical maximum).
-  function hindsightAgent(prices, b, g, meanP) {
-    const moves = new Float64Array(N), soc = new Float64Array(N);
-    rollout(solve(prices, b, g, meanP), g, N, g.s0, IDLE, moves, soc, 0);
-    return { moves, soc };
-  }
-
-  // A price forecast issued at step `tau`. Only the current interval is known exactly. Beyond
-  // that the forecast (a) misses short spikes and sharp moves: it follows a 3-hour average of
-  // the actual price, (b) pulls peaks and dips toward the average as lead time grows, and
-  // (c) carries correlated random error. At 0% error it equals the actual prices.
-  function forecastAt(prices, smooth, tau, errPct, scale, meanP, seed) {
-    const T = prices.length - tau, out = new Float64Array(T);
-    const rng = mulberry32((Math.imul(seed + 1, 2654435761) ^ Math.imul(tau + 7, 40503)) >>> 0);
-    const sigma = (errPct / 100) * scale;
-    const pull = Math.min(0.75, errPct / 40);
-    const blur = Math.min(1, errPct / 10);
-    let e = gaussian(rng);
-    for (let k = 0; k < T; k++) {
-      const p = prices[tau + k];
-      if (k === 0) { out[0] = p; continue; }
-      e = 0.9 * e + 0.4359 * gaussian(rng);                    // unit-variance AR(1) error
-      const L = k * DT;
-      const shape = p + blur * Math.min(1, L / 2) * (smooth[tau + k] - p);
-      out[k] = shape + pull * Math.min(1, L / 24) * (meanP - shape) + sigma * Math.min(1, Math.sqrt((L + 0.5) / 6)) * e;
-    }
-    return out;
-  }
-
-  // Realistic agent: re-plans every hour on the latest forecast, executes the next hour.
-  function forecastAgent(prices, b, g, errPct, seed, meanP) {
-    const moves = new Float64Array(N), soc = new Float64Array(N);
-    const scale = std(prices) + 0.5 * Math.abs(meanP);
-    const smooth = new Float64Array(N);                        // centred 3-hour moving average
-    for (let t = 0; t < N; t++) {
-      let sum = 0, n = 0;
-      for (let k = Math.max(0, t - 6); k <= Math.min(N - 1, t + 6); k++) { sum += prices[k]; n++; }
-      smooth[t] = sum / n;
-    }
-    let s = g.s0, m = IDLE, first = null;
-    for (let tau = 0; tau < N; tau += STEPS_PER_HOUR) {
-      const f = forecastAt(prices, smooth, tau, errPct, scale, meanP, seed);
-      if (!first) first = f;
-      const plan = solve(f, b, g, meanP, STEPS_PER_HOUR);
-      ({ s, m } = rollout(plan, g, Math.min(STEPS_PER_HOUR, N - tau), s, m, moves, soc, tau));
-    }
-    return { moves, soc, forecast: first };
-  }
-
-  // ------------------------------------------------------------------------------------
-  // 4. Benchmark: rule-based bot that reacts to every wiggle (no wear model, no foresight)
-  // ------------------------------------------------------------------------------------
-  function runBot(prices, g, lookback = 12) {
-    const moves = new Float64Array(N), soc = new Float64Array(N);
-    const band = 0.05 * Math.max(10, std(prices));             // ~$2/MWh on a typical day
-    let s = g.s0;
-    for (let t = 0; t < N; t++) {
-      const from = Math.max(0, t - lookback);
-      let ref = prices[t];
-      if (t > from) { ref = 0; for (let k = from; k < t; k++) ref += prices[k]; ref /= t - from; }
-      let j = 0;
-      if (prices[t] < ref - band && s < g.hi) j = Math.min(g.J, g.hi - s);
-      else if (prices[t] > ref + band && s > g.lo) j = -Math.min(g.J, s - g.lo);
-      s += j;
-      moves[t] = j * g.delta;
-      soc[t] = s * g.delta;
-    }
-    return { moves, soc };
-  }
-
-  // ------------------------------------------------------------------------------------
-  // 5. Shared ledger: cash, wear, cycles. Identical scoring for every strategy.
-  // ------------------------------------------------------------------------------------
-  function settle(prices, run, b, g, meanP) {
-    const eta = Math.sqrt(b.eff / 100);
-    const wearPerMWh = b.wear / (2 * b.cap);
-    const modes = new Int8Array(N), cum = new Float64Array(N), cumCycles = new Float64Array(N);
-    let cash = 0, wear = 0, throughput = 0, running = 0, runs = 0;
-    for (let t = 0; t < N; t++) {
-      const e = run.moves[t];
-      const c = e > 0 ? (-prices[t] * e) / eta : -prices[t] * e * eta;
-      const w = Math.abs(e) * wearPerMWh;
-      cash += c; wear += w; throughput += Math.abs(e);
-      running += c - w;
-      cum[t] = running;
-      cumCycles[t] = throughput / (2 * b.cap);
-      modes[t] = e > 1e-9 ? CHARGE : e < -1e-9 ? DISCHARGE : IDLE;
-      if (modes[t] !== IDLE && modes[t] !== (t ? modes[t - 1] : IDLE)) runs++;
-    }
-    // Energy left in (or missing from) the battery at the end is valued at the average price.
-    const inventory = (run.soc[N - 1] - g.s0 * g.delta) * meanP;
-    cum[N - 1] += inventory;
-    const revenue = cash + inventory;
-    return {
-      moves: run.moves, modes, cum, cumCycles, revenue, wear, net: revenue - wear, runs,
-      cycles: throughput / (2 * b.cap),
-      socPct: Array.from(run.soc, (v) => (v / b.cap) * 100),
     };
   }
 
   function simulate(state) {
     const mk = marketFor(state);
     CUR = mk.currency;
-    const prices = mk.prices;
-    const g = socGrid(state);
-    const meanP = mean(prices);
-
     const t0 = performance.now();
-    const hind = settle(prices, hindsightAgent(prices, state, g, meanP), state, g, meanP);
-    const useForecast = state.mode === "forecast" && state.fe > 0;
-    let ai = hind, forecast = null;
-    if (useForecast) {
-      const run = forecastAgent(prices, state, g, state.fe, state.seed, meanP);
-      ai = settle(prices, run, state, g, meanP);
-      forecast = run.forecast;
-    }
+    const w = E.runWindow(mk.prices, state, { mode: state.mode, fe: state.fe, seed: state.seed });
     const ms = performance.now() - t0;
-    const bot = settle(prices, runBot(prices, g), state, g, meanP);
-
     const capex = state.cap * 1000 * state.capex;
-    const annual = ai.net * 182.5;                              // 48h → one year
+    // Annual figures: the full-year simulation when it's available for this market, otherwise
+    // (simulated markets) the 48-hour result scaled to a year.
+    const year = mk.real ? annualCache.get(annualKey(state)) || null : null;
+    const annual = year ? year.ai.net * year.scale : w.ai.net * 182.5;
     const X = Array.from({ length: N }, (_, t) => fmtNaive(mk.startMs + t * STEP_MS));
     return {
-      mk, X, XEND: fmtNaive(mk.startMs + N * STEP_MS), prices, ai, hind, bot, forecast, useForecast, ms,
-      capex, annual, roi: (annual / capex) * 100, payback: annual > 0 ? capex / annual : Infinity,
-      captured: hind.net > 1 ? (ai.net / hind.net) * 100 : null,
+      mk, X, XEND: fmtNaive(mk.startMs + N * STEP_MS), prices: mk.prices, ms,
+      ai: w.ai, hind: w.hind, bot: w.bot, forecast: w.forecast, useForecast: w.useForecast,
+      capex, year, annual, roi: (annual / capex) * 100, payback: annual > 0 ? capex / annual : Infinity,
+      captured: w.hind.net > 1 ? (w.ai.net / w.hind.net) * 100 : null,
     };
   }
 
   // ------------------------------------------------------------------------------------
-  // 6. CSV upload: find a price column (and timestamps), resample to 15 minutes
+  // Full-year simulation (real markets): runs in a background worker so the page stays smooth.
+  // A fresh worker per run keeps it fast, and moving a slider simply cancels the old run.
   // ------------------------------------------------------------------------------------
-  function parseDate(s) {
-    if (!s) return null;
-    let m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:[ T]+(\d{1,2}):(\d{2}))?/);
-    if (m) return Date.UTC(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0));
-    m = s.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})(?:[ T,]+(\d{1,2}):(\d{2}))?/);
-    if (m) {
-      const dayFirst = s.includes(".") || +m[1] > 12;
-      const D = dayFirst ? +m[1] : +m[2], M = dayFirst ? +m[2] : +m[1];
-      return Date.UTC(+m[3], M - 1, D, +(m[4] || 0), +(m[5] || 0));
-    }
-    return null;
+  const annualCache = new Map();
+  let annualJob = null, annualTimer = 0;
+  const BATTERY_KEYS = ["cap", "pw", "wear", "eff", "frag", "lo", "hi"];
+  const hasYearData = (key) => { const m = realMarket(key); return !!m && m.prices.length >= 28 * STEPS_PER_DAY; };
+  function annualKey(s) {
+    const src = s.p === "upload" && uploaded ? `${uploaded.name}:${uploaded.prices.length}` : "";
+    return [s.p, src, ...BATTERY_KEYS.map((k) => s[k]), s.mode, s.fe, s.seed].join("|");
   }
 
-  function parseUpload(text, filename) {
-    const lines = text.replace(/^﻿/, "").split(/\r?\n/).filter((l) => l.trim());
-    if (lines.length < 3) throw new Error("That file looks empty.");
-    const delim = [",", ";", "\t"].reduce((a, d) => (lines[0].split(d).length > lines[0].split(a).length ? d : a), ",");
-    const split = (l) => l.split(delim).map((c) => c.trim().replace(/^"(.*)"$/, "$1").trim());
-    const toNum = (s) => {
-      if (!s) return NaN;
-      let t = s.replace(/\s/g, "");
-      if (delim === ";" && t.includes(",")) t = t.replace(/\./g, "").replace(",", ".");   // European decimals
-      return /^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/.test(t) ? parseFloat(t) : NaN;
-    };
-    const rows = lines.map(split);
-    const header = rows[0].some((c) => c && Number.isNaN(toNum(c)) && parseDate(c) === null) ? rows.shift() : null;
-    const ncol = Math.max(...rows.slice(0, 50).map((r) => r.length));
-    const sample = rows.slice(0, 300);
-    const share = (test) => (c) => sample.filter((r) => test(r[c])).length / sample.length;
-    let dateCol = -1;
-    for (let c = 0; c < ncol; c++) if (share((v) => parseDate(v) !== null)(c) > 0.9) { dateCol = c; break; }
-    const priceCols = [];
-    for (let c = 0; c < ncol; c++) if (c !== dateCol && share((v) => !Number.isNaN(toNum(v)))(c) > 0.9) priceCols.push(c);
-    if (!priceCols.length) throw new Error("Couldn't find a column of prices in that file.");
-    let pc = priceCols[priceCols.length - 1];
-    if (header) {
-      const named = priceCols.find((c) => /price|lmp|rrp|spot|eur|usd|aud|gbp|mwh/i.test(header[c] || ""));
-      if (named !== undefined) pc = named;
-    }
+  function requestAnnual() {
+    if (SIM[state.p] || !hasYearData(state.p) || kiosk.on) return;
+    const key = annualKey(state);
+    if (annualCache.has(key) || (annualJob && annualJob.key === key)) return;
+    if (annualJob) annualJob.cancel();
+    clearTimeout(annualTimer);
+    annualJob = { key, progress: 0, cancel() { this.cancelled = true; } };
+    annualTimer = setTimeout(() => startAnnual(key), 350);     // wait for slider drags to settle
+  }
 
-    let vals = [], times = [];
-    for (const r of rows) {
-      const v = toNum(r[pc]);
-      if (Number.isNaN(v)) continue;
-      vals.push(v);
-      if (dateCol >= 0) times.push(parseDate(r[dateCol]));
-    }
-    let step = 60, startMs = todayMs();
-    const timed = dateCol >= 0 && times.length > 2 && times.every((t) => t !== null);
-    if (timed) {
-      if (times[times.length - 1] < times[0]) { vals.reverse(); times.reverse(); }
-      const diffs = times.slice(1).map((t, i) => (t - times[i]) / 60000).filter((d) => d > 0).sort((a, b) => a - b);
-      step = Math.round(diffs[Math.floor(diffs.length / 2)]);
-      startMs = times[0];
-    }
-    let p15;
-    if (step >= 15 && step % 15 === 0) {
-      p15 = vals.flatMap((v) => Array(step / 15).fill(v));
-    } else if (step > 0 && step < 15 && 15 % step === 0) {
-      const k = 15 / step;
-      p15 = [];
-      for (let i = 0; i + k <= vals.length; i += k) p15.push(mean(vals.slice(i, i + k)));
-    } else {
-      throw new Error(`Unsupported time step (${step} min). Use 5, 15, 30 or 60-minute prices.`);
-    }
-    if (p15.length < N) throw new Error(`Need at least 48 hours of prices; this file has about ${Math.floor(p15.length / 4)} hours.`);
-    p15 = p15.slice(0, 96 * 62);
-    const h = (header || []).join(" ");
-    const currency = /€|eur/i.test(h) ? "€" : /£|gbp/i.test(h) ? "£" : /aud|a\$/i.test(h) ? "A$" : "$";
-    const days = Math.floor(p15.length / 96);
-    return {
-      label: "Your data", name: filename, currency, unit: `${currency}/MWh`,
-      tz: timed ? "times as in your file" : "no timestamps found; assumed hourly",
-      source: "your uploaded file (processed only in this browser)",
-      start: fmtNaive(startMs), prices: p15,
-      note: `Loaded ${days} day${days === 1 ? "" : "s"} of ${timed ? step + "-minute" : "hourly"} prices`,
+  function startAnnual(key) {
+    const job = annualJob;
+    if (!job || job.key !== key || job.cancelled) return;
+    const m = realMarket(state.p);
+    const b = {};
+    for (const k of BATTERY_KEYS) b[k] = state[k];
+    const opts = { mode: state.mode, fe: state.fe, seed: state.seed };
+    let worker = null;
+    job.cancel = () => { job.cancelled = true; if (worker) worker.terminate(); };
+    const done = (res) => {
+      if (job.cancelled) return;
+      annualCache.set(key, res);
+      if (annualJob === job) annualJob = null;
+      if (!kiosk.on) scheduleRender();
     };
+    const runHere = () => setTimeout(() => {          // fallback when workers are unavailable
+      if (!job.cancelled) done(E.annual(Float64Array.from(m.prices), parseNaive(m.start), b, opts));
+    }, 30);
+    try {
+      // createEngine (engine.js) is serialised into the worker, so this also works from file://.
+      const src = `const E = (${createEngine.toString()})();
+        onmessage = (e) => { const d = e.data;
+          const res = E.annual(new Float64Array(d.prices), d.startMs, d.b, d.opts, (p) => postMessage({ progress: p }));
+          postMessage({ result: res }); };`;
+      const url = URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+      worker = new Worker(url);
+      worker.onmessage = (e) => {
+        URL.revokeObjectURL(url);
+        if (e.data.progress != null) { job.progress = e.data.progress; if (annualJob === job) renderAnnualStatus(); return; }
+        worker.terminate();
+        done(e.data.result);
+      };
+      worker.onerror = (e) => { if (e.preventDefault) e.preventDefault(); worker.terminate(); runHere(); };
+      const buf = Float64Array.from(m.prices).buffer;
+      worker.postMessage({ prices: buf, startMs: parseNaive(m.start), b, opts }, [buf]);
+    } catch (err) {
+      runHere();
+    }
   }
 
   // ------------------------------------------------------------------------------------
-  // 7. State ⇄ URL hash, so a scenario can be shared as a link
+  // State ⇄ URL hash, so a scenario can be shared as a link
   // ------------------------------------------------------------------------------------
   function readState() {
     const s = { ...DEFAULTS };
@@ -477,6 +193,7 @@
     if (Number.isFinite(seed)) s.seed = Math.abs(seed) % 100000;
     const d = parseInt(params.get("d"), 10);
     if (Number.isFinite(d) && d >= 0) s.d = d;
+    if (s.d == null) s.d = SIM[s.p] ? 0 : defaultDay(s.p);
     return s;
   }
   function writeState() {
@@ -611,15 +328,21 @@
       ];
     }
     const uplift = ai.net - bot.net;
-    const payback = Number.isFinite(r.payback) ? `${r.payback.toFixed(1)}-year payback` : "no payback at these settings";
+    const payback = Number.isFinite(r.payback) ? `${r.payback.toFixed(1)}-yr payback` : "no payback here";
     const captured = r.captured == null ? "—" : `${Math.round(r.captured)}%`;
+    // Real markets: ROI comes from the full-year simulation (shown as pending while it runs).
+    const yearPending = r.mk.real && !r.year && hasYearData(state.p);
+    const roiKpi = yearPending
+      ? { label: "Estimated annual ROI", value: "…", sub: "simulating full year" }
+      : { label: "Estimated annual ROI", value: `${r.roi.toFixed(1)}%`, cls: r.roi < 0 ? "neg" : "",
+          sub: `${payback} · ${r.year ? (r.year.scale > 1.01 ? `from ${r.year.days} days` : `full year ${r.mk.meta.year || ""}`.trim()) : "scaled from 48 h"}` };
     return [
       { label: "Net profit, 48 hours", value: money(ai.net), sub: "after battery wear", cls: ai.net < 0 ? "neg" : "" },
       { label: "vs. rule-based bot", value: signedMoney(uplift), sub: `bot: ${money(bot.net)}`, cls: uplift >= 0 ? "pos" : "neg" },
       { label: "Of hindsight maximum", value: captured,
         sub: r.useForecast ? `max: ${money(hind.net)}` : "agent sees the future" },
       { label: "Battery cycles used", value: ai.cycles.toFixed(2), sub: `bot: ${bot.cycles.toFixed(2)}` },
-      { label: "Estimated annual ROI", value: `${r.roi.toFixed(1)}%`, sub: payback, cls: r.roi < 0 ? "neg" : "" },
+      roiKpi,
     ];
   }
 
@@ -639,9 +362,13 @@
     const cyclePart = saved > 0.05
       ? `while using <b>${saved.toFixed(1)} fewer cycles</b>`
       : saved < -0.05 ? `using <b>${(-saved).toFixed(1)} more cycles</b> where they pay off` : "with a similar number of cycles";
-    let text = uplift >= 0
+    let text = ai.runs === 0
+      ? `In these 48 hours no price gap was big enough to pay for battery wear and efficiency losses, so the AI <b>held</b> and saved the battery${bot.net < 0 ? `, while the rule-based bot <b>lost ${money(-bot.net)}</b> by trading anyway` : ""}.`
+        + (r.year ? " The full-year results below show where it does trade." : "")
+      : uplift >= 0
       ? `The AI earns <b>${signedMoney(uplift).slice(1)} more</b> than a rule-based bot over 48 hours, ${cyclePart}, in <b>${ai.runs}</b> charge and discharge runs (bot: ${bot.runs}).`
       : `Here the AI earns ${money(-uplift)} less than the bot, using ${ai.runs} runs to the bot's ${bot.runs}.`;
+    if (ai.runs === 0) { $("insight").innerHTML = text; return; }
     if (r.useForecast && r.captured != null) {
       text += ` Trading on a forecast with ±${state.fe}% error, it still captures <b>${Math.round(r.captured)}%</b> of what perfect hindsight would earn.`;
     } else if (!r.useForecast) {
@@ -682,6 +409,87 @@
         `<tr class="${cls || ""}"><td>${k}</td><td class="ai">${a}</td><td>${h}</td><td>${b}</td></tr>`).join("")}</tbody>`;
   }
 
+  // ------------------------------------------------------------------------------------
+  // Full-year section (real markets)
+  // ------------------------------------------------------------------------------------
+  function annualRows(y) {
+    const s = y.scale;
+    return [
+      ["Net revenue per year", money(y.ai.net * s), money(y.hind.net * s), money(y.bot.net * s), "total"],
+      ["Battery wear per year", money(-y.ai.wear * s), money(-y.hind.wear * s), money(-y.bot.wear * s)],
+      ["Cycles per year", Math.round(y.ai.cycles * s), Math.round(y.hind.cycles * s), Math.round(y.bot.cycles * s)],
+      ["Charge / discharge runs", fmtNum(y.ai.runs * s), fmtNum(y.hind.runs * s), fmtNum(y.bot.runs * s)],
+    ];
+  }
+
+  function renderAnnualStatus() {
+    const pct = annualJob ? Math.round((annualJob.progress || 0) * 100) : 100;
+    $("annual-status").innerHTML = annualJob
+      ? `<span class="spinner" aria-hidden="true"></span>Simulating every hour of the year… ${pct}%`
+      : "";
+  }
+
+  function renderAnnual(r) {
+    const sec = $("annual");
+    if (!r || !r.mk.real || !hasYearData(state.p)) { sec.hidden = true; return; }
+    sec.hidden = false;
+    const m = r.mk.meta, y = r.year;
+    const days = Math.floor(m.prices.length / STEPS_PER_DAY);
+    $("annual-title").textContent = days >= 365 ? `A full year: ${m.label}, ${m.year || ""}`.trim() : `${days} days: ${m.label}`;
+    const agent = r.useForecast
+      ? `The AI re-plans every hour on a forecast with ±${state.fe}% error and a 24-hour look-ahead`
+      : "Perfect-hindsight view: the AI sees every price in advance";
+    $("annual-note").textContent = `${agent}. Hindsight is one optimisation over the whole period: the most any strategy could earn.`
+      + (days < 365 ? ` Annual figures are scaled from ${days} days.` : "");
+    renderAnnualStatus();
+    sec.classList.toggle("pending", !y);
+    if (!y) return;
+    const s = y.scale;
+    const annualNet = y.ai.net * s;
+    const roi = (annualNet / r.capex) * 100;
+    const payback = annualNet > 0 ? `${(r.capex / annualNet).toFixed(1)}-year payback` : "no payback at these settings";
+    const pctMax = y.hind.net > 1 ? `${Math.round((y.ai.net / y.hind.net) * 100)}%` : "—";
+    const kpis = [
+      { label: days >= 365 ? "Net revenue in the year" : "Net revenue per year", value: money(annualNet), sub: "after battery wear", cls: annualNet < 0 ? "neg" : "" },
+      { label: "vs. rule-based bot", value: signedMoney((y.ai.net - y.bot.net) * s), sub: `bot: ${money(y.bot.net * s)}`,
+        cls: y.ai.net >= y.bot.net ? "pos" : "neg" },
+      { label: "Of hindsight maximum", value: pctMax, sub: `max: ${money(y.hind.net * s)}` },
+      { label: "Annual ROI", value: `${roi.toFixed(1)}%`, sub: payback, cls: roi < 0 ? "neg" : "" },
+    ];
+    $("annual-kpis").innerHTML = kpis.map((k) => `
+      <div class="kpi"><div class="label">${k.label}</div><div class="value ${k.cls || ""}">${k.value}</div><div class="sub">${k.sub}</div></div>`).join("");
+    const c = palette();
+    $("annual-compare").innerHTML = `
+      <thead><tr><th></th>
+        <th><span class="dot" style="background:${c.ink}"></span>AI</th>
+        <th><span class="dot" style="background:${c.soc}"></span>Hindsight</th>
+        <th><span class="dot" style="background:${c.bot}"></span>Bot</th></tr></thead>
+      <tbody>${annualRows(y).map(([k, a, h, b, cls]) =>
+        `<tr class="${cls || ""}"><td>${k}</td><td class="ai">${a}</td><td>${h}</td><td>${b}</td></tr>`).join("")}</tbody>`;
+    renderMonthlyChart(y, c, "chart-monthly");
+  }
+
+  // Monthly net revenue: AI bars against the hindsight maximum.
+  function renderMonthlyChart(y, c, el, print) {
+    const x = y.ai.monthly.map((mo) => `${MO[mo.month]}${y.ai.monthly.length > 12 ? " " + String(mo.year).slice(2) : ""}`);
+    const traces = [
+      { x, y: y.hind.monthly.map((mo) => mo.net), name: "Hindsight", type: "scatter", mode: "lines+markers",
+        line: { color: c.soc, width: 1.5, dash: "dash" }, marker: { size: 5, color: c.soc },
+        hovertemplate: `Hindsight ${CUR}%{y:,.0f}<extra></extra>` },
+      { x, y: y.ai.monthly.map((mo) => mo.net), name: "AI", type: "bar", marker: { color: c.ink },
+        hovertemplate: `AI ${CUR}%{y:,.0f}<extra></extra>` },
+    ];
+    const layout = {
+      margin: { l: 56, r: 8, t: 8, b: 28 }, showlegend: false, bargap: 0.35,
+      paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+      font: { family: print ? "Helvetica, Arial, sans-serif" : getComputedStyle(document.body).fontFamily, size: 12, color: c.muted },
+      hovermode: "x unified", hoverlabel: { bgcolor: c.surface, bordercolor: c.line, font: { color: c.ink, size: 12 } },
+      xaxis: { showgrid: false, linecolor: c.line, fixedrange: true },
+      yaxis: { gridcolor: c.line, fixedrange: true, tickprefix: CUR, tickformat: ",.2s", zeroline: true, zerolinecolor: c.muted },
+    };
+    return Plotly.react(el, traces, layout, PLOT_CONFIG);
+  }
+
   function updateDaySelect(r) {
     const sel = $("day-select");
     if (!r.mk.real) { sel.hidden = true; return; }
@@ -713,6 +521,8 @@
     $("lg-hind").hidden = !r.useForecast;
     updateOutputs();
     updateDaySelect(r);
+    requestAnnual();
+    renderAnnual(r);
     $("solve-time").textContent = `Agent planned 192 intervals in ${Math.max(1, Math.round(r.ms))} ms`;
     writeState();
     return r;
@@ -787,7 +597,7 @@
 
   function selectMarket(key) {
     state.p = key;
-    state.d = 0;
+    state.d = SIM[key] ? 0 : defaultDay(key);
     if (SIM[key]) { state.seed = SIM[key].seed; state.vol = SIM[key].volatility; }
     syncControls();
     scheduleRender();
@@ -885,7 +695,7 @@
     const q = kioskQueue();
     const key = q[kiosk.i % q.length];
     kiosk.i++;
-    state.p = key; state.d = 0; state.mode = "forecast";
+    state.p = key; state.d = SIM[key] ? 0 : defaultDay(key); state.mode = "forecast";
     if (SIM[key]) { state.seed = SIM[key].seed; state.vol = SIM[key].volatility; }
     syncControls();
     kiosk.t = 0;
@@ -948,16 +758,20 @@
   async function createReport(fields) {
     const r = last;
     const c = PALETTES.light;
-    // Draw a light-theme copy of the main chart off screen and turn it into an image.
+    // Draw a light-theme chart off screen and turn it into an image: the monthly results when a
+    // full-year simulation exists, otherwise the 48-hour dispatch.
     const tmp = document.createElement("div");
     tmp.style.cssText = "position:fixed;left:-12000px;top:0;width:1000px;height:400px;";
     document.body.appendChild(tmp);
     let img = "";
     try {
-      const layoutFont = { family: "Helvetica, Arial, sans-serif" };
-      await renderMainChart(r, c, N, tmp);
-      await Plotly.relayout(tmp, { font: { ...layoutFont, size: 12, color: c.muted }, "xaxis.tickformat": "%a %d %b %H:%M" });
-      img = await Plotly.toImage(tmp, { format: "png", width: 1000, height: 400, scale: 2 });
+      if (r.year) {
+        await renderMonthlyChart(r.year, c, tmp, true);
+      } else {
+        await renderMainChart(r, c, N, tmp);
+        await Plotly.relayout(tmp, { font: { family: "Helvetica, Arial, sans-serif", size: 12, color: c.muted }, "xaxis.tickformat": "%a %d %b %H:%M" });
+      }
+      img = await Plotly.toImage(tmp, { format: "png", width: 1000, height: r.year ? 340 : 400, scale: 2 });
     } finally {
       Plotly.purge(tmp);
       tmp.remove();
@@ -971,14 +785,40 @@
   function reportHtml(r, f, img) {
     const today = new Date();
     const dateStr = `${today.getDate()} ${MO[today.getMonth()]} ${today.getFullYear()}`;
-    const period = r.mk.real
-      ? `${esc(r.mk.meta.name)}, ${fmtDay(r.mk.startMs)} – ${fmtDay(r.mk.startMs + DAY_MS)}`
-      : `Simulated market (“${esc(r.mk.label)}” scenario), 48 hours`;
-    const source = r.mk.real ? esc(r.mk.meta.source) : "Simulated prices";
-    const agent = r.useForecast ? `Forecast-driven, ±${state.fe}% forecast error, re-planned hourly` : "Perfect hindsight (theoretical maximum)";
-    const k = kpiList(r);
+    const y = r.year;
+    const m = r.mk.meta;
+    const days = y ? y.days : 2;
+    const period = !r.mk.real
+      ? `Simulated market (“${esc(r.mk.label)}” scenario), 48 hours`
+      : y ? `${esc(m.name)}, ${fmtDay(parseNaive(m.start))} – ${fmtDay(parseNaive(m.start) + (days - 1) * DAY_MS)} (${days} days, ${esc(m.tz)})`
+          : `${esc(m.name)}, ${fmtDay(r.mk.startMs)} – ${fmtDay(r.mk.startMs + DAY_MS)}`;
+    const source = r.mk.real ? esc(m.source) : "Simulated prices";
+    const agent = r.useForecast
+      ? `Forecast-driven: ±${state.fe}% forecast error, re-planned every hour${y ? " with a 24-hour look-ahead" : ""}`
+      : "Perfect hindsight (theoretical maximum)";
     const kpi = (label, value, sub) => `<div class="rp-kpi"><div class="l">${label}</div><div class="v">${value}</div><div class="s">${sub}</div></div>`;
-    const rows = compareRows(r).map(([name, a, h, b]) => `<tr><td>${name}</td><td><b>${a}</b></td><td>${h}</td><td>${b}</td></tr>`).join("");
+    const payback = r.annual > 0 ? `${(r.capex / r.annual).toFixed(1)}-year payback` : "no payback at these settings";
+    let kpis, table, chartTitle, legend;
+    if (y) {
+      const s = y.scale;
+      kpis = kpi(days >= 365 ? `Net revenue, ${m.year || "full year"}` : "Net revenue per year", money(y.ai.net * s), "after battery wear")
+        + kpi("Annual ROI", `${r.roi.toFixed(1)}%`, payback)
+        + kpi("Of the hindsight maximum", y.hind.net > 1 ? `${Math.round((y.ai.net / y.hind.net) * 100)}%` : "—", `max: ${money(y.hind.net * s)}`)
+        + kpi("Cycles per year", Math.round(y.ai.cycles * s), `rule-based bot: ${Math.round(y.bot.cycles * s)}`);
+      table = annualRows(y);
+      chartTitle = `Monthly net revenue${days >= 365 && m.year ? ", " + m.year : ""}`;
+      legend = "Black bars: AI agent · blue dashed: perfect-hindsight maximum.";
+    } else {
+      const k = kpiList(r);
+      kpis = kpi("Net profit over 48 hours", k[0].value, "after battery wear")
+        + kpi("Annualised net revenue", money(r.annual), "48 hours × 182.5")
+        + kpi("Estimated annual ROI", `${r.roi.toFixed(1)}%`, payback)
+        + kpi("Of the hindsight maximum", k[2].value, `vs. rule-based bot: ${k[1].value}`);
+      table = compareRows(r);
+      chartTitle = "48-hour dispatch";
+      legend = `Orange: actual price${r.forecast ? " · grey dashed: forecast at start" : ""} · blue area: battery charge (right axis) · green ▲ buy · red ▼ sell.`;
+    }
+    const rows = table.map(([name, a, h, b]) => `<tr><td>${name}</td><td><b>${a}</b></td><td>${h}</td><td>${b}</td></tr>`).join("");
     const asset = [
       ["Energy capacity", `${state.cap} MWh`],
       ["Power rating", `${state.pw} MW (${(state.cap / state.pw).toFixed(1)}-hour)`],
@@ -988,6 +828,11 @@
       ["Installed cost", `${CUR}${state.capex}/kWh (${money(r.capex)} total)`],
     ].map(([a, b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join("");
     const contactLine = [f.author, f.contact].filter(Boolean).map(esc).join(" · ");
+    const annualNote = y
+      ? (days >= 365
+        ? "Annual figures come from operating the battery through every hour of the year on actual prices; past prices don't guarantee future revenue."
+        : `Annual figures are scaled from ${days} days of prices; real revenue varies with season and market conditions.`)
+      : "Annual figures scale a 48-hour result to a year; real revenue varies with season and market conditions.";
     return `
       <div class="rp-head">
         <div>
@@ -997,18 +842,13 @@
         </div>
         <div class="rp-meta"><div class="rp-brand">⚡ AI Grid Trader</div>${dateStr}${contactLine ? "<br>" + contactLine : ""}</div>
       </div>
-      <div class="rp-kpis">
-        ${kpi("Net profit over 48 hours", k[0].value, "after battery wear")}
-        ${kpi("Annualised net revenue", money(r.annual), "48 hours × 182.5")}
-        ${kpi("Estimated annual ROI", k[4].value, k[4].sub)}
-        ${kpi("Of the perfect-hindsight max", k[2].value, `vs. rule-based bot: ${k[1].value}`)}
-      </div>
-      <h3>48-hour dispatch</h3>
-      <img class="rp-chart" src="${img}" alt="Price, battery charge and AI trades over 48 hours">
-      <div class="rp-legend">Orange: actual price${r.forecast ? " · grey dashed: forecast at start" : ""} · blue area: battery charge (right axis) · green ▲ buy · red ▼ sell.</div>
+      <div class="rp-kpis">${kpis}</div>
+      <h3>${chartTitle}</h3>
+      <img class="rp-chart" src="${img}" alt="${chartTitle}">
+      <div class="rp-legend">${legend}</div>
       <div class="rp-cols">
         <div>
-          <h3>Results compared</h3>
+          <h3>${y ? "Results per year" : "Results compared"}</h3>
           <table class="rp-table"><thead><tr><th></th><th>AI</th><th>Hindsight</th><th>Rule-based bot</th></tr></thead><tbody>${rows}</tbody></table>
         </div>
         <div>
@@ -1023,7 +863,7 @@
         <tr><td>Agent</td><td>${agent}</td></tr>
       </tbody></table>
       <ul class="rp-notes">
-        <li>Annual figures scale the 48-hour result to a year; real revenue varies with season and market conditions.</li>
+        <li>${annualNote}</li>
         <li>Energy arbitrage only. Ancillary services, capacity payments and other revenue streams are not included.</li>
         <li>Battery wear is charged at the stated cost per full cycle. Forecast error is simulated on top of actual prices.</li>
         <li>Illustrative estimate, not a financial forecast or investment advice.</li>
@@ -1073,7 +913,7 @@
       if (!file) return;
       if (file.size > 20e6) { toast("That file is too large (20 MB max)", 3500); return; }
       try {
-        uploaded = parseUpload(await file.text(), file.name);
+        uploaded = E.parseUpload(await file.text(), file.name);
         buildRealChips();
         selectMarket("upload");
         toast(uploaded.note, 3500);

@@ -146,6 +146,27 @@
       </div>
     </section>
 
+    <section class="card annual" id="annual" hidden>
+      <div class="annual-head">
+        <div>
+          <h2 id="annual-title">A full year on real prices</h2>
+          <p class="note" id="annual-note"></p>
+        </div>
+        <div class="annual-status" id="annual-status" aria-live="polite"></div>
+      </div>
+      <div class="kpis kpis-4" id="annual-kpis"></div>
+      <div class="annual-body">
+        <div>
+          <div class="legend" aria-hidden="true">
+            <span><i class="sw sw-bar"></i>AI net revenue per month</span>
+            <span><i class="sw sw-dash-blue"></i>Hindsight maximum</span>
+          </div>
+          <div id="chart-monthly" class="chart chart-sm" role="img" aria-label="Net revenue per month for the AI compared with the hindsight maximum"></div>
+        </div>
+        <table class="compare" id="annual-compare"></table>
+      </div>
+    </section>
+
     <section class="how">
       <div>
         <span class="num">01</span>
@@ -175,6 +196,9 @@
         (the actual prices plus simulated forecast error that grows with lead time and smooths out peaks and dips),
         re-plans the rest of the horizon, and executes the next hour. <b>Perfect hindsight</b> plans on the actual
         prices and shows the theoretical maximum.</p>
+      <p>For the real markets, the <b>full-year</b> results run the same agent through all 8,760 hours of 2025
+        (re-planning every hour on a 24-hour forecast), so annual revenue and seasonality come from real prices rather
+        than from scaling up two days.</p>
     </details>
 
     <section class="card contact" id="contact">
@@ -205,7 +229,7 @@
   </main>
 
   <footer class="wrap">
-    <span>© 2026 Baizak Isaev · Results are illustrative and cover energy arbitrage only.</span>
+    <span>© 2026 Baizak Isaev · <a href="https://github.com/nolimitbaiza/ai-grid-trader/blob/main/LICENSE.md">Non-commercial license</a> · Results are illustrative and cover energy arbitrage only.</span>
     <span><span id="solve-time"></span> · <a href="https://github.com/nolimitbaiza/ai-grid-trader">Source on GitHub</a></span>
   </footer>
 
@@ -230,6 +254,7 @@
 
   <script src="assets/vendor/plotly-basic-2.35.2.min.js"></script>
   <script src="assets/data/markets.js"></script>
+  <script src="assets/engine.js"></script>
   <script src="assets/app.js"></script>
 </body>
 </html>

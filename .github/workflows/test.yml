@@ -1,0 +1,34 @@
+# Runs the model's automated checks on every push and pull request.
+# See tests/engine.test.js for what is checked.
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: JavaScript syntax
+        run: |
+          node --check assets/engine.js
+          node --check assets/app.js
+          node --check sw.js
+
+      - name: Model tests
+        run: node --test tests/engine.test.js
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Python syntax (tools and Streamlit app)
+        run: python -m py_compile tools/*.py streamlit_app/app.py

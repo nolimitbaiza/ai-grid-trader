@@ -213,6 +213,22 @@ input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px 
 .compare tr.total td { font-weight: 650; color: var(--ink); }
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
 
+/* ---------- Full year ---------- */
+.annual { margin-top: 16px; }
+.annual-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px 24px; flex-wrap: wrap; }
+.annual-head .note { max-width: 70ch; margin-bottom: 18px; }
+.annual-status { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.spinner {
+  width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--ink);
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.kpis-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 4px; }
+.annual-body { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px 32px; align-items: start; }
+.annual-body .compare { margin-top: 12px; }
+.annual.pending .kpis-4, .annual.pending .annual-body { opacity: .35; filter: grayscale(1); transition: opacity .2s; }
+.sw-bar { width: 10px; height: 10px; border-radius: 2px; background: var(--ink); }
+
 /* ---------- How it works ---------- */
 .how { display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px; padding: 64px 0 8px; }
 .how h3 { font-size: 16px; margin: 10px 0 6px; }
@@ -293,7 +309,7 @@ body.kiosk .kiosk-banner {
 /* Full-screen layout: header, banner, KPIs and a chart that fills the rest of the window. */
 body.kiosk .intro, body.kiosk .markets, body.kiosk .controls, body.kiosk .split, body.kiosk .how,
 body.kiosk .method, body.kiosk footer, body.kiosk .seg, body.kiosk .insight, body.kiosk .source,
-body.kiosk .contact { display: none !important; }
+body.kiosk .contact, body.kiosk .annual { display: none !important; }
 body.kiosk { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
 body.kiosk .top, body.kiosk main { width: 100%; }
 body.kiosk main { flex: 1; display: flex; flex-direction: column; padding-bottom: 16px; }
@@ -353,7 +369,8 @@ body.embed { background: transparent; }
 }
 @media (max-width: 880px) {
   .grid { grid-template-columns: repeat(2, 1fr); }
-  .split { grid-template-columns: 1fr; }
+  .split, .annual-body { grid-template-columns: 1fr; }
+  .kpis-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .how { grid-template-columns: 1fr; gap: 28px; padding-top: 48px; }
   .chart { height: 340px; }
   .markets { grid-template-columns: 1fr; }
