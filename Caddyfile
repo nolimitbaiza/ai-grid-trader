@@ -1,0 +1,11 @@
+# Web server for the Railway deployment (see Dockerfile). Railway provides $PORT.
+:{$PORT:8080} {
+	root * /srv
+	encode zstd gzip
+
+	# The service worker must always be re-checked so new versions roll out.
+	header /sw.js Cache-Control "no-cache"
+	header /assets/* Cache-Control "public, max-age=3600"
+
+	file_server
+}

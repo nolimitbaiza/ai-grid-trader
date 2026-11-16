@@ -108,6 +108,20 @@ def run(pw, label, browser_type, **ctx):
 
     check("email link set", page.get_attribute("#email-link", "href").startswith("mailto:baizakisaev@"))
 
+    about = context.new_page()
+    about.on("pageerror", lambda e: errors.append(str(e)))
+    about.goto(URL + "about.html", wait_until="networkidle")
+    text = about.inner_text("main")
+    check("About page: university and interests", "North American University" in text and "Renewable energy" in text)
+    check("About page: email link set", about.get_attribute("#email-link", "href").startswith("mailto:baizakisaev@"))
+    check("About page: photo loads", about.evaluate("(() => { const i = document.querySelector('.avatar-xl img'); return !!i && i.naturalWidth > 0; })()"))
+    if label.startswith("Chromium"):
+        about.add_script_tag(url="https://cdn.jsdelivr.net/npm/axe-core@4.10.2/axe.min.js")
+        found = about.evaluate("async () => (await axe.run(document, {resultTypes: ['violations']})).violations.map(v => v.id + ' x' + v.nodes.length)")
+        check("About page: no accessibility violations", not found, ", ".join(found))
+    about.screenshot(path=str(SHOTS / f"{label.replace(' ', '_')}_about.png"), full_page=True)
+    about.close()
+
     page.click("#btn-play")
     page.wait_for_timeout(3500)
     labels = page.locator("#kpis .label").all_inner_texts()

@@ -366,6 +366,7 @@ body.kiosk .top, body.kiosk main { width: 100%; }
 body.kiosk main { flex: 1; display: flex; flex-direction: column; padding-bottom: 16px; }
 body.kiosk .main-card { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 body.kiosk .chart { flex: 1 1 auto; height: auto; min-height: 320px; }
+body.kiosk .nav-about { display: none; }
 body.kiosk #btn-play { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 
 /* ---------- Embed mode (?embed=1): just the demo, for iframes ---------- */
@@ -417,6 +418,7 @@ body.embed { background: transparent; }
   .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .btn .lbl { display: none; }
   .btn { padding: 7px 10px; }
+  .nav-about { display: none; }          /* the avatar links to About me on small screens */
 }
 @media (max-width: 880px) {
   .grid { grid-template-columns: repeat(2, 1fr); }
@@ -446,4 +448,22 @@ body.embed { background: transparent; }
 }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
+}
+
+/* ---------- About page ---------- */
+.brand-link { color: inherit; text-decoration: none; }
+.top .actions a.btn { text-decoration: none; }
+.nav-current { border-color: var(--ink); }
+.about-hero { display: flex; align-items: center; gap: 24px 32px; flex-wrap: wrap; padding: 44px 0 32px; }
+.about-hero h1 { max-width: none; }
+.about-hero .eyebrow { margin-bottom: 10px; }
+.avatar-xl { width: 128px; height: 128px; font-size: 38px; flex: none; }
+.about-grid { margin-bottom: 16px; }
+.about-grid .note, .about-project .note { margin: 6px 0 0; }
+.about-project { margin-bottom: 16px; }
+.about-project .contact-links { margin-top: 16px; }
+.about-page main { padding-bottom: 8px; }
+@media (max-width: 640px) {
+  .avatar-xl { width: 96px; height: 96px; font-size: 30px; }
+  .about-hero { padding-top: 28px; }
 }
