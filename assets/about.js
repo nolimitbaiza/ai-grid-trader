@@ -25,6 +25,8 @@
   const link = document.getElementById("email-link");
   link.href = `mailto:${email}?subject=${encodeURIComponent("Hello from your website")}`;
   link.title = email;
+  const text = document.getElementById("email-text");
+  if (text) { text.href = link.href; text.textContent = email; }
 
   if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
     navigator.serviceWorker.register("sw.js").catch(() => {});

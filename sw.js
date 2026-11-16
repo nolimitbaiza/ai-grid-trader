@@ -4,7 +4,7 @@
  * (handy at venues with bad Wi-Fi). Files are served from the cache instantly and refreshed in
  * the background, so a new version shows up on the next visit after it is published.
  */
-const CACHE = "agt-v9";
+const CACHE = "agt-v10";
 const ASSETS = [
   "./",                       // home page (about me)
   "ai-grid-trader",           // the demo (clean URL for ai-grid-trader.html)
@@ -21,6 +21,7 @@ const ASSETS = [
   "assets/vendor/plotly-basic-2.35.2.min.js",
   "assets/img/qr-linkedin.svg",
   "assets/img/profile.jpg",
+  "assets/img/project-chart.png",
   "assets/icons/icon-192.png",
   "assets/icons/icon-512.png",
 ];

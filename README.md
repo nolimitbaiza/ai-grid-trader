@@ -316,7 +316,7 @@ python tools/build_services.py raw --year 2025  # needs: pip install openpyxl
 **Repository layout:**
 
 ```
-index.html, assets/about.js Home page: about me and projects
+index.html, assets/about.js Home page: about me and the project
 ai-grid-trader.html         The demo (served at /ai-grid-trader)
 about.html                  Redirect from the old About address to the home page
 assets/engine.js            The model: markets, RL agent, forecasts, benchmarks, accounting, full year
