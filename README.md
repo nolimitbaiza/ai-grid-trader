@@ -201,8 +201,8 @@ timestamp,price_eur_mwh
 The site is static, so it runs anywhere. It's published two ways:
 
 - **GitHub Pages:** every push to `main` updates it.
-- **Railway:** `Dockerfile` serves the site with [Caddy](https://caddyserver.com) (`Caddyfile`, on
-  Railway's `$PORT`); `railway.json` sets the build and a health check. Deploy with the
+- **Railway:** https://ai-grid-trader-production.up.railway.app. `Dockerfile` serves the site with [Caddy](https://caddyserver.com) (`Caddyfile`, on
+  Railway's `$PORT`); Railway detects the Dockerfile automatically. Deploy with the
   [Railway CLI](https://docs.railway.com/guides/cli): `railway up`. To redeploy on every push, connect
   the GitHub repo to the service in the Railway dashboard.
 
@@ -289,7 +289,7 @@ attached to each run.
 ```
 index.html                  The demo page
 about.html, assets/about.js The About me page
-Dockerfile, Caddyfile, railway.json   Railway hosting
+Dockerfile, Caddyfile        Railway hosting
 assets/engine.js            The model: markets, RL agent, forecasts, benchmarks, accounting, full year
 assets/app.js               The page: controls, charts, full-year worker, kiosk, PDF, sharing
 assets/style.css            Minimal light/dark theme and the printable business case
