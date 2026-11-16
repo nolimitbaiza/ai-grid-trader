@@ -56,6 +56,9 @@ jobs:
           sleep 2
           python tools/browser_check.py http://localhost:8600/ shots firefox,chromium,webkit,ipad,offline
 
+      - name: Release upgrade (returning visitors get new files, not cached ones)
+        run: python tools/upgrade_check.py
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -254,6 +254,9 @@ The site is static: plain HTML, CSS and JavaScript with no build step.
   [/ai-grid-trader](https://baizakisaev.com/ai-grid-trader) (`ai-grid-trader.html`). The
   `Dockerfile` serves the website files with [Caddy](https://caddyserver.com) (`Caddyfile`: clean
   URLs, compression, caching, Railway's `$PORT`); tools, tests and the prototype aren't published.
+  Each deploy stamps a build number into file addresses (`style.css?v=…`, the `__BUILD__`
+  placeholder) and the offline cache, so browsers and Cloudflare never mix a new page with old
+  files; open pages reload once when a new release takes over. `tools/upgrade_check.py` tests this.
   Old links keep working: shared scenarios and `?kiosk=1` / `?embed=1` on the home page open the
   demo, and `/about.html` goes to the home page.
   Deploy with the [Railway CLI](https://docs.railway.com/guides/cli) by running `railway up` in the
@@ -337,6 +340,7 @@ tools/build_assets.py       Rebuilds the app icons and QR code
 tools/build_og.py           Rebuilds the link-preview image
 tools/serve.py              Local dev server with clean URLs
 tools/browser_check.py      Cross-browser and accessibility checks
+tools/upgrade_check.py      Returning visitors get each new release (no stale cached files)
 tests/engine.test.js        Automated model tests
 .github/workflows/          test.yml (every push), refresh-data.yml (monthly data refresh)
 streamlit_app/              Earlier analyst prototype in Python (Streamlit)

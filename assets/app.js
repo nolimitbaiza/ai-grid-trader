@@ -22,6 +22,9 @@
   };
   // Real markets: a full calendar year of 15-minute prices each (see tools/build_markets.py).
   const REAL = window.GRID_MARKETS || {};
+  // Build stamp: the Dockerfile replaces __BUILD__ on every deploy, so file addresses change with
+  // each release and no browser or CDN cache can serve an old copy next to a new page.
+  const BUILD = "__BUILD__";
   let uploaded = null;                    // a market built from the visitor's CSV
 
   // Chart colours, mirrored from style.css (charts are drawn in JS, and the PDF always uses light).
@@ -146,7 +149,7 @@
     if (!marketLoads[key]) {
       marketLoads[key] = new Promise((resolve, reject) => {
         const s = document.createElement("script");
-        s.src = `assets/data/prices-${key}.js`;
+        s.src = `assets/data/prices-${key}.js?v=${BUILD}`;
         s.onload = () => (REAL[key] && REAL[key].prices ? resolve() : reject(new Error("no prices")));
         s.onerror = () => { delete marketLoads[key]; s.remove(); reject(new Error("load failed")); };
         document.head.appendChild(s);
@@ -1273,6 +1276,13 @@
     if (!fsRequest) $("btn-present").hidden = true;
     // Offline support: cache the app after the first visit (only over http/https, not file://).
     if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
+      // When a new release takes over from an older one, reload once so the page and its files
+      // match (the scenario lives in the URL, so nothing is lost; booth auto-play restarts itself).
+      const updating = !!navigator.serviceWorker.controller;
+      let reloaded = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (updating && !reloaded && !(kiosk.on && !kiosk.auto)) { reloaded = true; location.reload(); }
+      });
       navigator.serviceWorker.register("sw.js").catch(() => {});
     }
 

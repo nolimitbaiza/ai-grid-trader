@@ -29,6 +29,12 @@
   if (text) { text.href = link.href; text.textContent = email; }
 
   if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
+    // When a new release takes over from an older one, reload once so the page and its files match.
+    const updating = !!navigator.serviceWorker.controller;
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (updating && !reloaded) { reloaded = true; location.reload(); }
+    });
     navigator.serviceWorker.register("sw.js").catch(() => {});
   }
 })();
