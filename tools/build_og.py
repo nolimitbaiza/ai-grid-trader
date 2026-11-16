@@ -1,6 +1,6 @@
 """Render the 1200x630 link-preview image (assets/og.png) from the live demo.
 
-Usage: serve the repo locally (python -m http.server 8600), then
+Usage: serve the repo locally (python tools/serve.py), then
        python tools/build_og.py [http://localhost:8600/]
 Needs: pip install playwright && python -m playwright install chromium
 """
@@ -43,7 +43,7 @@ CARD = """<!doctype html><html><head><meta charset="utf-8"><style>
 with sync_playwright() as pw:
     browser = pw.chromium.launch()
     page = browser.new_page(viewport={"width": 1100, "height": 900}, device_scale_factor=2, color_scheme="light")
-    page.goto(URL + "#p=de", wait_until="networkidle")
+    page.goto(URL + "ai-grid-trader#p=de", wait_until="networkidle")
     page.wait_for_timeout(800)
     shot = page.locator(".main-card").screenshot()
     card = browser.new_page(viewport={"width": 1200, "height": 630}, device_scale_factor=1)

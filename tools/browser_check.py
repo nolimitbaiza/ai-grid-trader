@@ -1,6 +1,6 @@
 """Cross-browser smoke test: Chromium, Firefox, WebKit (Safari's engine) and an iPad.
 
-Usage: serve the repo locally (python -m http.server 8600), then
+Usage: serve the repo locally (python tools/serve.py), then
        python tools/browser_check.py [http://localhost:8600/] [screenshot_dir] [chromium,firefox,webkit,ipad,offline]
 Needs: pip install playwright && python -m playwright install chromium firefox webkit
 Exit code is non-zero if any check fails.
@@ -35,7 +35,7 @@ def run(pw, label, browser_type, **ctx):
     errors = []
     page.on("pageerror", lambda e: errors.append(str(e)))
     page.on("console", lambda m: m.type == "error" and "profile.jpg" not in m.text and "404" not in m.text and errors.append(m.text))
-    page.goto(URL, wait_until="networkidle")
+    page.goto(URL + "ai-grid-trader", wait_until="networkidle")
 
     kpis = page.locator("#kpis .value").all_inner_texts()
     check("page renders 5 headline numbers", len(kpis) == 5 and all(kpis), " | ".join(kpis))
@@ -106,19 +106,29 @@ def run(pw, label, browser_type, **ctx):
     check("business case builds (chart image + print)", page.locator("#report img").count() == 1)
     check("business case defaults to your name", "Baizak Isaev" in page.inner_text("#report"))
 
-    check("email link set", page.get_attribute("#email-link", "href").startswith("mailto:baizakisaev@"))
+    check("project page has no 'Built by' card", page.locator("#contact").count() == 0)
 
     about = context.new_page()
     about.on("pageerror", lambda e: errors.append(str(e)))
-    about.goto(URL + "about.html", wait_until="networkidle")
+    about.goto(URL, wait_until="networkidle")
     text = about.inner_text("main")
-    check("About page: university and interests", "North American University" in text and "Renewable energy" in text)
-    check("About page: email link set", about.get_attribute("#email-link", "href").startswith("mailto:baizakisaev@"))
-    check("About page: photo loads", about.evaluate("(() => { const i = document.querySelector('.avatar-xl img'); return !!i && i.naturalWidth > 0; })()"))
+    check("Home page is About me", "North American University" in text and "Renewable energy" in text)
+    check("Home page: business email link", about.get_attribute("#email-link", "href").startswith("mailto:baizak@baizakisaev.com"))
+    check("Home page: photo loads", about.evaluate("(() => { const i = document.querySelector('.avatar-xl img'); return !!i && i.naturalWidth > 0; })()"))
+    about.click(".project-card")
+    about.wait_for_load_state("networkidle")
+    check("Home page: project card opens the demo", about.url.split("#")[0].split("?")[0].rstrip("/").endswith("ai-grid-trader") and about.locator("#chart-main").count() == 1, about.url)
+    about.go_back(wait_until="networkidle")
+    old = context.new_page()
+    old.goto(URL + "#p=de&mode=forecast", wait_until="networkidle")
+    check("old shared demo links still open the demo", "ai-grid-trader" in old.url and "p=de" in old.url, old.url)
+    old.goto(URL + "about.html", wait_until="networkidle")
+    check("old about.html link reaches the home page", old.locator(".about-hero").count() == 1, old.url)
+    old.close()
     if label.startswith("Chromium"):
         about.add_script_tag(url="https://cdn.jsdelivr.net/npm/axe-core@4.10.2/axe.min.js")
         found = about.evaluate("async () => (await axe.run(document, {resultTypes: ['violations']})).violations.map(v => v.id + ' x' + v.nodes.length)")
-        check("About page: no accessibility violations", not found, ", ".join(found))
+        check("Home page: no accessibility violations", not found, ", ".join(found))
     about.screenshot(path=str(SHOTS / f"{label.replace(' ', '_')}_about.png"), full_page=True)
     about.close()
 
@@ -153,7 +163,9 @@ def offline(pw):
     page.wait_for_timeout(1500)
     page.reload(wait_until="networkidle")          # now controlled by the service worker
     context.set_offline(True)
-    page.goto(URL + "?kiosk=1", wait_until="load")
+    page.goto(URL, wait_until="load")
+    check("home page opens with no network", page.locator(".about-hero").count() == 1)
+    page.goto(URL + "ai-grid-trader?kiosk=1", wait_until="load")
     page.wait_for_timeout(1500)
     kpis = page.locator("#kpis .value").all_inner_texts()
     check("opens with no network after first visit", len(kpis) == 5 and all(kpis), " | ".join(kpis))

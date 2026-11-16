@@ -2,7 +2,7 @@
 
 > **This is the original prototype, kept for reference.** It uses simulated prices and a
 > perfect-foresight agent only. The main product is the web demo at the repository root
-> (live at https://baizakisaev.com), which adds a full year of real
+> (live at https://baizakisaev.com/ai-grid-trader), which adds a full year of real
 > market prices, forecast-driven trading, a hindsight benchmark and automated tests.
 > Numbers from the two versions are not directly comparable.
 

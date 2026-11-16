@@ -4,11 +4,10 @@
  * (handy at venues with bad Wi-Fi). Files are served from the cache instantly and refreshed in
  * the background, so a new version shows up on the next visit after it is published.
  */
-const CACHE = "agt-v8";
+const CACHE = "agt-v9";
 const ASSETS = [
-  "./",
-  "index.html",
-  "about.html",
+  "./",                       // home page (about me)
+  "ai-grid-trader",           // the demo (clean URL for ai-grid-trader.html)
   "assets/about.js",
   "manifest.webmanifest",
   "assets/style.css",
@@ -46,8 +45,13 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET" || new URL(req.url).origin !== self.location.origin) return;
-  // Every page load (?kiosk=1, ?embed=1, …) is served by the same cached index page.
-  const key = req.mode === "navigate" ? new Request(new URL("./", self.registration.scope)) : req;
+  // Page loads are cached by page, ignoring ?kiosk=1 / #… and the .html / index.html spelling:
+  // "/", "/index.html" -> "/"; "/ai-grid-trader", "/ai-grid-trader.html" -> "/ai-grid-trader".
+  let key = req;
+  if (req.mode === "navigate") {
+    const path = new URL(req.url).pathname.replace(/index\.html$/, "").replace(/\.html$/, "");
+    key = new Request(new URL(path, self.location.origin));
+  }
   event.respondWith(
     caches.open(CACHE).then(async (cache) => {
       const cached = await cache.match(key, { ignoreSearch: true });

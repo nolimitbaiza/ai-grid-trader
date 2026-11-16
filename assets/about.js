@@ -21,7 +21,7 @@
   paint();
 
   // The address is assembled at runtime to keep it away from simple scrapers.
-  const email = ["baizakisaev", "gmail.com"].join("@");
+  const email = ["baizak", "baizakisaev.com"].join("@");
   const link = document.getElementById("email-link");
   link.href = `mailto:${email}?subject=${encodeURIComponent("Hello from your website")}`;
   link.title = email;

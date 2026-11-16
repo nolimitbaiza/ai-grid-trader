@@ -1,7 +1,7 @@
 # ⚡ AI Grid Trader
 
 [![Tests](https://github.com/nolimitbaiza/ai-grid-trader/actions/workflows/test.yml/badge.svg)](https://github.com/nolimitbaiza/ai-grid-trader/actions/workflows/test.yml)
-[![Live demo](https://img.shields.io/badge/live%20demo-baizakisaev.com-0c0a09)](https://baizakisaev.com)
+[![Live demo](https://img.shields.io/badge/live%20demo-baizakisaev.com%2Fai--grid--trader-0c0a09)](https://baizakisaev.com/ai-grid-trader)
 [![License: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20Noncommercial-lightgrey)](LICENSE.md)
 
 **An AI that trades a grid-scale battery, and protects it.**
@@ -11,16 +11,16 @@ as a real cost, so it never wears the battery out on trades that aren't worth it
 simulated markets, on a full year of real prices from California, Germany and South Australia, or
 on your own price file.
 
-### ▶ [Live demo: baizakisaev.com](https://baizakisaev.com) · [About me](https://baizakisaev.com/about.html)
+### ▶ [Live demo: baizakisaev.com/ai-grid-trader](https://baizakisaev.com/ai-grid-trader) · [About me: baizakisaev.com](https://baizakisaev.com)
 
-[![AI Grid Trader: the 48-hour trading view with buy and sell decisions](assets/og.png)](https://baizakisaev.com)
+[![AI Grid Trader: the 48-hour trading view with buy and sell decisions](assets/og.png)](https://baizakisaev.com/ai-grid-trader)
 
 Everything runs in the visitor's browser: no sign-up, no backend, works on phones and tablets,
 and keeps working offline after the first visit.
 
 Built by **Baizak Isaev**, a student at North American University interested in renewable energy ·
-[About me](https://baizakisaev.com/about.html) · [LinkedIn](https://www.linkedin.com/in/baizakisaev/) ·
-[GitHub](https://github.com/nolimitbaiza) · baizakisaev@gmail.com
+[About me](https://baizakisaev.com) · [LinkedIn](https://www.linkedin.com/in/baizakisaev/) ·
+[GitHub](https://github.com/nolimitbaiza) · baizak@baizakisaev.com
 
 ---
 
@@ -49,7 +49,7 @@ Built by **Baizak Isaev**, a student at North American University interested in 
 
 | To… | Do this |
 |---|---|
-| Run it unattended on a booth screen | Open **[baizakisaev.com/?kiosk=1](https://baizakisaev.com/?kiosk=1)**. It goes full-window and auto-plays every market while the headline numbers count up, with a QR code to LinkedIn in the corner. Scrolling keeps it playing; a tap, click or key hands control to the visitor; after 60 s idle it starts again. |
+| Run it unattended on a booth screen | Open **[baizakisaev.com/ai-grid-trader?kiosk=1](https://baizakisaev.com/ai-grid-trader?kiosk=1)**. It goes full-window and auto-plays every market while the headline numbers count up, with a QR code to LinkedIn in the corner. Scrolling keeps it playing; a tap, click or key hands control to the visitor; after 60 s idle it starts again. |
 | Start or stop auto-play by hand | Click **Auto-play**, or press **K** |
 | Switch market | Click a chip, or press **1–7** (four simulated, then California, Germany, South Australia) |
 | Show a different 48 hours | Click **New day** or press **N** (real markets: or pick dates from the menu) |
@@ -63,11 +63,11 @@ Built by **Baizak Isaev**, a student at North American University interested in 
 | Light or dark | The sun/moon button, or **T** (remembered) |
 | Full screen | **Present**, or **F** |
 
-**No Wi-Fi at the venue?** Open [baizakisaev.com](https://baizakisaev.com) once while you're
+**No Wi-Fi at the venue?** Open [the demo](https://baizakisaev.com/ai-grid-trader) once while you're
 online; after that it opens with no connection, because the browser keeps a copy. You can also
 install it like an app: the install icon in Chrome or Edge's address bar, or *Share → Add to Home
 Screen* on iPad and iPhone. As a last resort, download this repo (**Code → Download ZIP**), unzip
-it and open `index.html`.
+it and open `ai-grid-trader.html`.
 
 **Sharing the link** on LinkedIn, Slack or email shows a preview card (`assets/og.png`). LinkedIn
 caches previews; after changing the image, refresh it with the
@@ -249,9 +249,13 @@ Text contrast meets WCAG AA in both themes. An automated audit (axe-core) runs o
 
 The site is static: plain HTML, CSS and JavaScript with no build step.
 
-- **[baizakisaev.com](https://baizakisaev.com)** is hosted on [Railway](https://railway.com). The
-  `Dockerfile` serves the website files with [Caddy](https://caddyserver.com) (`Caddyfile`:
-  compression, caching, Railway's `$PORT`); tools, tests and the prototype aren't published.
+- **[baizakisaev.com](https://baizakisaev.com)** is hosted on [Railway](https://railway.com):
+  the home page is the About me page (`index.html`), with the demo at
+  [/ai-grid-trader](https://baizakisaev.com/ai-grid-trader) (`ai-grid-trader.html`). The
+  `Dockerfile` serves the website files with [Caddy](https://caddyserver.com) (`Caddyfile`: clean
+  URLs, compression, caching, Railway's `$PORT`); tools, tests and the prototype aren't published.
+  Old links keep working: shared scenarios and `?kiosk=1` / `?embed=1` on the home page open the
+  demo, and `/about.html` goes to the home page.
   Deploy with the [Railway CLI](https://docs.railway.com/guides/cli) by running `railway up` in the
   repo folder. To redeploy automatically on every push, including the monthly data refresh,
   connect this GitHub repo to the service in Railway (*service → Settings → Source*).
@@ -262,7 +266,7 @@ demo shows:
 
 ```html
 <iframe
-  src="https://baizakisaev.com/?embed=1"
+  src="https://baizakisaev.com/ai-grid-trader?embed=1"
   style="width:100%; height:1250px; border:0;"
   loading="lazy"
   title="AI Grid Trader demo">
@@ -271,10 +275,11 @@ demo shows:
 
 ## Development
 
-Serve the folder with any static server and open it:
+Serve the folder with the bundled dev server (same clean URLs as the live site) and open
+http://localhost:8600/:
 
 ```bash
-python -m http.server 8600
+python tools/serve.py
 ```
 
 **Tests.** `tests/engine.test.js` checks the model with Node's built-in test runner (no installs):
@@ -296,7 +301,7 @@ node --test tests/engine.test.js
 - Every AI trade can be explained, with consistent numbers.
 
 GitHub runs these on every push (see the **Actions** tab), together with `tools/browser_check.py`:
-the page and the About page in Firefox, Chromium, WebKit (Safari's engine), an iPad and offline,
+the demo and the home page in Firefox, Chromium, WebKit (Safari's engine), an iPad and offline,
 including the full-year simulation, revenue streams, lifetime view, "Why this trade?" and the
 accessibility audit. Screenshots are attached to each run.
 
@@ -311,8 +316,9 @@ python tools/build_services.py raw --year 2025  # needs: pip install openpyxl
 **Repository layout:**
 
 ```
-index.html                  The demo page
-about.html, assets/about.js The About me page
+index.html, assets/about.js Home page: about me and projects
+ai-grid-trader.html         The demo (served at /ai-grid-trader)
+about.html                  Redirect from the old About address to the home page
 assets/engine.js            The model: markets, RL agent, forecasts, benchmarks, accounting, full year
 assets/app.js               The page: controls, charts, full-year worker, kiosk, PDF, sharing
 assets/style.css            Minimal light/dark theme and the printable business case
@@ -329,6 +335,7 @@ tools/build_markets.py      Rebuilds the real-price data files
 tools/build_services.py     Rebuilds the grid-services price averages
 tools/build_assets.py       Rebuilds the app icons and QR code
 tools/build_og.py           Rebuilds the link-preview image
+tools/serve.py              Local dev server with clean URLs
 tools/browser_check.py      Cross-browser and accessibility checks
 tests/engine.test.js        Automated model tests
 .github/workflows/          test.yml (every push), refresh-data.yml (monthly data refresh)
@@ -353,14 +360,14 @@ python -m streamlit run app.py
 ## About the author
 
 I'm **Baizak Isaev**, a student at North American University with a strong interest in renewable
-energy. More on [baizakisaev.com/about.html](https://baizakisaev.com/about.html), or reach me on
-[LinkedIn](https://www.linkedin.com/in/baizakisaev/) or at baizakisaev@gmail.com.
+energy. More on [baizakisaev.com](https://baizakisaev.com), or reach me on
+[LinkedIn](https://www.linkedin.com/in/baizakisaev/) or at baizak@baizakisaev.com.
 
 ## License
 
 **PolyForm Noncommercial 1.0.0** (see [LICENSE.md](LICENSE.md)). You may use, study and modify
 this code for non-commercial purposes such as learning, research and personal projects.
-**Commercial use requires a separate license**: contact baizakisaev@gmail.com or
+**Commercial use requires a separate license**: contact baizak@baizakisaev.com or
 [LinkedIn](https://www.linkedin.com/in/baizakisaev/).
 
 Third-party parts keep their own terms: Plotly.js (`assets/vendor/`, MIT license) and the market

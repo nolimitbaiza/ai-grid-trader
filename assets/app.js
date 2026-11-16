@@ -1104,8 +1104,8 @@
   // 12. Business case PDF: fills a print-only page, then opens the print dialog
   // ------------------------------------------------------------------------------------
   const FIELDS = ["client", "project", "author", "contact"];
-  // Built by / contact. The address is assembled at runtime to keep it away from simple scrapers.
-  const OWNER = { name: "Baizak Isaev", email: ["baizakisaev", "gmail.com"].join("@"), linkedin: "linkedin.com/in/baizakisaev" };
+  // Owner details for the business-case PDF. The address is assembled at runtime to keep it away from simple scrapers.
+  const OWNER = { name: "Baizak Isaev", email: ["baizak", "baizakisaev.com"].join("@"), linkedin: "linkedin.com/in/baizakisaev" };
 
   function openReportDialog() {
     const dlg = $("report-dialog");
@@ -1270,8 +1270,6 @@
     updateThemeButton();
     render();
 
-    $("email-link").href = `mailto:${OWNER.email}?subject=${encodeURIComponent("AI Grid Trader demo")}`;
-    $("email-link").title = OWNER.email;
     if (!fsRequest) $("btn-present").hidden = true;
     // Offline support: cache the app after the first visit (only over http/https, not file://).
     if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {

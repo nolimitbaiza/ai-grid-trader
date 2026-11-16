@@ -52,7 +52,7 @@ jobs:
 
       - name: Browser checks
         run: |
-          python -m http.server 8600 > /dev/null 2>&1 &
+          python tools/serve.py 8600 > /dev/null 2>&1 &
           sleep 2
           python tools/browser_check.py http://localhost:8600/ shots firefox,chromium,webkit,ipad,offline
 

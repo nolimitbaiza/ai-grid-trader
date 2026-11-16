@@ -2,7 +2,7 @@
   "name": "AI Grid Trader",
   "short_name": "Grid Trader",
   "description": "An AI that trades a grid battery, and protects it. Live demo by Baizak Isaev.",
-  "start_url": "./",
+  "start_url": "ai-grid-trader",
   "scope": "./",
   "display": "standalone",
   "background_color": "#fafaf9",
@@ -13,6 +13,6 @@
     { "src": "assets/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
-    { "name": "Auto-play (booth mode)", "short_name": "Auto-play", "url": "./?kiosk=1" }
+    { "name": "Auto-play (booth mode)", "short_name": "Auto-play", "url": "ai-grid-trader?kiosk=1" }
   ]
 }
