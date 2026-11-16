@@ -6,7 +6,7 @@
 
  NOTE: This Streamlit app is the original prototype. It uses simulated prices and a
  perfect-foresight agent only. The main product is the web demo (index.html at the
- repository root, live at https://nolimitbaiza.github.io/ai-grid-trader/), which adds
+ repository root, live at https://baizakisaev.com), which adds
  real market data for a full year, forecast-driven trading, a hindsight benchmark and
  automated tests. Results from the two versions are not directly comparable.
 
@@ -844,7 +844,7 @@ class DashboardUI:
         st.info(
             "**Earlier analyst prototype.** This version uses simulated prices and a perfect-foresight "
             "agent only. For real market data, forecast-driven trading and full-year results, use the "
-            "[web demo](https://nolimitbaiza.github.io/ai-grid-trader/).",
+            "[web demo](https://baizakisaev.com).",
             icon="ℹ️",
         )
 

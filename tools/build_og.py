@@ -36,7 +36,7 @@ CARD = """<!doctype html><html><head><meta charset="utf-8"><style>
     <h1>An AI that trades a grid battery, and protects it.</h1>
     <p><span class="live"></span>Live demo on real market prices. Runs in your browser.</p>
   </div>
-  <div class="by">{avatar}<div>Baizak Isaev <span>· nolimitbaiza.github.io/ai-grid-trader</span></div></div>
+  <div class="by">{avatar}<div>Baizak Isaev <span>· baizakisaev.com</span></div></div>
   <img class="shot" src="data:image/png;base64,{shot}">
 </body></html>"""
 

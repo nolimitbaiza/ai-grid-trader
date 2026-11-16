@@ -4,7 +4,7 @@
  * (handy at venues with bad Wi-Fi). Files are served from the cache instantly and refreshed in
  * the background, so a new version shows up on the next visit after it is published.
  */
-const CACHE = "agt-v7";
+const CACHE = "agt-v8";
 const ASSETS = [
   "./",
   "index.html",
