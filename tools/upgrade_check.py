@@ -4,7 +4,8 @@ Emulates the live setup's worst case: every response says "keep for 4 hours" (wh
 browsers). Publishes build 1001, visits both pages, publishes build 1002 with a changed stylesheet,
 visits again and expects the new stylesheet without a manual refresh.
 
-Usage: python tools/upgrade_check.py [repo_dir] [work_dir]
+Usage: python tools/upgrade_check.py [repo_dir] [work_dir] [--from OLD_RELEASE_DIR]
+       --from: publish an older release first (e.g. a `git archive` of a previous commit)
 Needs: pip install playwright && python -m playwright install chromium
 """
 import http.server, os, shutil, sys, threading, time
@@ -13,15 +14,18 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 import tempfile
-REPO = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parent.parent
-WORK = Path(sys.argv[2]) if len(sys.argv) > 2 else Path(tempfile.mkdtemp(prefix="agt-upgrade-")); SITE = WORK / "site"; PROFILE = WORK / "profile"
+ARGS = [a for i, a in enumerate(sys.argv[1:], 1) if not a.startswith("--") and sys.argv[i - 1] != "--from"]
+FROM = Path(sys.argv[sys.argv.index("--from") + 1]) if "--from" in sys.argv else None
+REPO = Path(ARGS[0]) if len(ARGS) > 0 else Path(__file__).resolve().parent.parent
+WORK = Path(ARGS[1]) if len(ARGS) > 1 else Path(tempfile.mkdtemp(prefix="agt-upgrade-")); SITE = WORK / "site"; PROFILE = WORK / "profile"
 FILES = ["index.html", "ai-grid-trader.html", "about.html", "manifest.webmanifest", "sw.js", "assets"]
 
-def deploy(build, marker):
+def deploy(build, marker, src=None):
+    src = src or REPO
     if SITE.exists(): shutil.rmtree(SITE)
     SITE.mkdir(parents=True)
     for f in FILES:
-        (shutil.copytree if (REPO / f).is_dir() else shutil.copy)(REPO / f, SITE / f)
+        (shutil.copytree if (src / f).is_dir() else shutil.copy)(src / f, SITE / f)
     for f in ["index.html", "ai-grid-trader.html", "sw.js", "assets/app.js"]:
         p = SITE / f; p.write_text(p.read_text(encoding="utf-8").replace("__BUILD__", build), encoding="utf-8")
     css = SITE / "assets/style.css"; css.write_text(css.read_text(encoding="utf-8") + f"\n:root {{ --deploy-marker: {marker}; }}\n", encoding="utf-8")
@@ -36,7 +40,7 @@ class H(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *a): pass
 
 if PROFILE.exists(): shutil.rmtree(PROFILE)
-deploy("1001", 1)
+deploy("1001", 1, FROM)
 srv = http.server.ThreadingHTTPServer(("", 8611), partial(H, directory=str(SITE)))
 threading.Thread(target=srv.serve_forever, daemon=True).start()
 URL = "http://localhost:8611/"

@@ -7,7 +7,7 @@
  * Versioning: the Dockerfile replaces __BUILD__ with a new stamp on every deploy. That renames this
  * cache and changes the address of every stamped file (style.css?v=…), so a new release is never
  * mixed with old copies held by the browser or by a CDN such as Cloudflare. The pages reload once
- * when a new version takes over (see about.js / app.js).
+ * when a new release takes over (about.js / app.js; a worker-side client.navigate() crashed Chromium).
  */
 const BUILD = "__BUILD__";
 const CACHE = `agt-${BUILD}`;
