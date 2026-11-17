@@ -8,6 +8,7 @@
   <meta name="author" content="Baizak Isaev">
   <!-- Link previews (LinkedIn, Slack, email, X) -->
   <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Baizak Isaev">
   <meta property="og:url" content="https://baizakisaev.com/ai-grid-trader">
   <link rel="canonical" href="https://baizakisaev.com/ai-grid-trader">
   <meta property="og:title" content="AI Grid Trader · live demo by Baizak Isaev">
@@ -38,24 +39,24 @@
       <span class="brand-name">AI Grid Trader</span>
     </div>
     <div class="actions">
-      <button class="btn" id="btn-play" type="button" title="Auto-play for a booth screen (K)">
+      <button class="btn" id="btn-play" type="button" aria-label="Auto-play" title="Auto-play for an unattended screen (K)">
         <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" fill="currentColor"/></svg>
         <span class="lbl">Auto-play</span>
       </button>
-      <button class="btn" id="btn-report" type="button" title="Download a one-page business case as PDF">
+      <button class="btn" id="btn-report" type="button" aria-label="Business case" title="Download a one-page business case as PDF">
         <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <span class="lbl">Business case</span>
       </button>
-      <button class="btn" id="btn-share" type="button" title="Copy a link to this exact scenario">
+      <button class="btn" id="btn-share" type="button" aria-label="Share" title="Copy a link to this exact scenario">
         <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         <span class="lbl">Share</span>
       </button>
-      <button class="btn" id="btn-present" type="button" title="Full screen (F)">
+      <button class="btn" id="btn-present" type="button" aria-label="Present full screen" title="Full screen (F)">
         <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         <span class="lbl">Present</span>
       </button>
       <button class="btn btn-icon" id="btn-theme" type="button" aria-label="Switch theme" title="Switch light / dark (T)"></button>
-      <a class="btn btn-ghost nav-about" href="./"><span class="lbl">About me</span></a>
+      <a class="btn btn-ghost nav-about" href="./">About me</a>
       <a class="avatar avatar-sm" href="./" title="About Baizak Isaev">
         <span aria-hidden="true">BI</span>
         <img src="assets/img/profile.jpg?v=__BUILD__" alt="Baizak Isaev" onerror="this.remove()">
@@ -64,6 +65,7 @@
   </header>
 
   <main class="wrap">
+    <noscript><p class="noscript">This demo runs in your browser and needs JavaScript. Please enable it and reload the page.</p></noscript>
     <section class="intro">
       <p class="eyebrow"><span class="live" aria-hidden="true"></span>Live demo · Battery energy trading</p>
       <h1>An AI that trades a grid battery, and protects it.</h1>
@@ -120,7 +122,7 @@
       <div id="chart-main" class="chart" role="img" aria-label="Electricity price over 48 hours with the battery's charge level and the AI's buy and sell decisions"></div>
       <p class="click-hint">Click any <span style="color:var(--charge)" aria-hidden="true">▲</span> or <span style="color:var(--discharge)" aria-hidden="true">▼</span> to see why the AI made that trade, or <button type="button" class="link-btn" id="explain-first">explain the first trade</button>.</p>
       <div class="explain" id="explain" hidden>
-        <button class="explain-close" type="button" aria-label="Close explanation" onclick="document.getElementById('explain').hidden = true">×</button>
+        <button class="explain-close" id="explain-close" type="button" aria-label="Close explanation">×</button>
         <div class="kicker">Why this trade?</div>
         <div id="explain-body" aria-live="polite"></div>
       </div>
@@ -286,6 +288,7 @@
   <script src="assets/data/markets.js?v=__BUILD__"></script>
   <script src="assets/data/services.js?v=__BUILD__"></script>
   <script src="assets/engine.js?v=__BUILD__"></script>
+  <script src="assets/site.js?v=__BUILD__"></script>
   <script src="assets/app.js?v=__BUILD__"></script>
 </body>
 </html>

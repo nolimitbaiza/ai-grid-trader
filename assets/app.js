@@ -6,6 +6,7 @@
  * in a background worker and in the automated tests.
  *
  * Runs entirely in the visitor's browser (no server): host it anywhere, embed it, or open it from disk.
+ * Needs site.js (theme switch, offline support) to be loaded first.
  */
 (function () {
   "use strict";
@@ -328,12 +329,10 @@
   }
 
   // ------------------------------------------------------------------------------------
-  // 8. Rendering
+  // Rendering
   // ------------------------------------------------------------------------------------
   const $ = (id) => document.getElementById(id);
-  const effectiveTheme = () =>
-    document.documentElement.getAttribute("data-theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-  const palette = () => PALETTES[effectiveTheme()];
+  const palette = () => PALETTES[window.Site.theme()];
   const PLOT_CONFIG = { displayModeBar: false, responsive: true };
 
   function baseLayout(c, r) {
@@ -688,9 +687,10 @@
       `<div class="kpi"><div class="label">${k.label}</div><div class="value ${k.cls || ""}">${k.value}</div><div class="sub">${k.sub}</div></div>`).join("");
 
     const cyc = Math.round(r.stack.cycles), botCyc = Math.round(r.stack.botCycles);
+    const times = (n) => (n === 1 ? "once" : n === 2 ? "twice" : `${n} times`);
     const warn = (n) => (n <= LIFE.warrantyCycles ? `within a typical ${LIFE.warrantyCycles}-cycle-a-year warranty` : `<b>over</b> a typical ${LIFE.warrantyCycles}-cycle-a-year warranty limit`);
-    let text = `The AI uses <b>${cyc} cycles a year</b>, ${warn(cyc)}, and needs new cells ${ai.augments ? `${ai.augments} time${ai.augments > 1 ? "s" : ""}` : "never"} in ${state.life} years.`
-      + ` The rule-based bot uses <b>${botCyc}</b>, ${warn(botCyc)}, and needs them ${bot.augments ? `${bot.augments} time${bot.augments > 1 ? "s" : ""}${bot.firstAug ? ` (first in year ${bot.firstAug})` : ""}` : "never"}`
+    let text = `The AI uses <b>${cyc} cycles a year</b>, ${warn(cyc)}, and ${ai.augments ? `needs new cells ${times(ai.augments)}` : "never needs new cells"} in ${state.life} years.`
+      + ` The rule-based bot uses <b>${botCyc}</b>, ${warn(botCyc)}, and ${bot.augments ? `needs them ${times(bot.augments)}${bot.firstAug ? ` (first in year ${bot.firstAug})` : ""}` : "never needs them"}`
       + (bot.augTotal > ai.augTotal ? `, costing ${money(bot.augTotal - ai.augTotal)} more in replacement cells.` : ".");
     const iw = impliedWear();
     text += ` These assumptions put physical wear at about <b>${money(iw)} per full cycle</b>; the agent currently prices it at ${money(state.wear)}.`
@@ -880,7 +880,7 @@
     renderLifetime(r);
     hideExplain();
     if (!clickBound && $("chart-main").on) { $("chart-main").on("plotly_click", onChartClick); clickBound = true; }
-    $("solve-time").textContent = `Agent planned 192 intervals in ${Math.max(1, Math.round(r.ms))} ms`;
+    $("solve-time").textContent = `Agent planned ${N} intervals in ${Math.max(1, Math.round(r.ms))} ms`;
     writeState();
     return r;
   }
@@ -893,7 +893,7 @@
   }
 
   // ------------------------------------------------------------------------------------
-  // 9. Controls
+  // Controls
   // ------------------------------------------------------------------------------------
   function setPct(input) {
     const pct = ((input.value - input.min) / (input.max - input.min)) * 100;
@@ -1013,21 +1013,11 @@
   }
 
   // ------------------------------------------------------------------------------------
-  // 10. Light / dark switch (remembered in this browser)
+  // Light / dark
   // ------------------------------------------------------------------------------------
-  const SUN = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
-  const MOON = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
-  function updateThemeButton() {
-    const dark = effectiveTheme() === "dark";
-    const btn = $("btn-theme");
-    btn.innerHTML = dark ? SUN : MOON;
-    btn.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
-  }
-  function toggleTheme() {
-    const next = effectiveTheme() === "dark" ? "light" : "dark";
-    document.documentElement.setAttribute("data-theme", next);
-    try { localStorage.setItem("agt-theme", next); } catch (e) { /* storage unavailable: still switches */ }
-    updateThemeButton();
+  // The switch itself lives in site.js (shared with the home page); the charts are drawn in
+  // JavaScript, so they are redrawn here in the new colours.
+  function onThemeChange() {
     // Let the browser paint the new colours first, then redraw the charts (that can take a moment).
     requestAnimationFrame(() => setTimeout(() => {
       if (kiosk.on) renderMainChart(last, palette(), kiosk.t, "chart-main");
@@ -1036,8 +1026,8 @@
   }
 
   // ------------------------------------------------------------------------------------
-  // 11. Kiosk / auto-play: loops every market, replaying the AI's decisions in time.
-  //     ?kiosk=1 starts it on load and restarts it after 60 s without interaction.
+  // Kiosk / auto-play: loops every market, replaying the AI's decisions in time.
+  // ?kiosk=1 starts it on load and restarts it after 60 s without interaction.
   // ------------------------------------------------------------------------------------
   const kiosk = { on: false, timer: 0, idle: 0, i: 0, t: N, auto: new URLSearchParams(location.search).has("kiosk") };
   const kioskQueue = () => [...Object.keys(SIM), ...Object.keys(REAL)];
@@ -1104,11 +1094,11 @@
   }
 
   // ------------------------------------------------------------------------------------
-  // 12. Business case PDF: fills a print-only page, then opens the print dialog
+  // Business case PDF: fills a print-only page, then opens the print dialog
   // ------------------------------------------------------------------------------------
   const FIELDS = ["client", "project", "author", "contact"];
-  // Owner details for the business-case PDF. The address is assembled at runtime to keep it away from simple scrapers.
-  const OWNER = { name: "Baizak Isaev", email: ["baizak", "baizakisaev.com"].join("@"), linkedin: "linkedin.com/in/baizakisaev" };
+  // Owner details for the business-case PDF (the address is assembled in site.js).
+  const OWNER = { name: "Baizak Isaev", email: window.Site.email, linkedin: "linkedin.com/in/baizakisaev" };
 
   function openReportDialog() {
     const dlg = $("report-dialog");
@@ -1230,7 +1220,7 @@
           <div class="rp-title">${f.client ? "Prepared for " + esc(f.client) : "AI battery trading: what it earns"}</div>
           <div>${f.project ? esc(f.project) : `${state.cap} MWh / ${state.pw} MW battery`}</div>
         </div>
-        <div class="rp-meta"><div class="rp-brand">⚡ AI Grid Trader</div>${dateStr}${contactLine ? "<br>" + contactLine : ""}</div>
+        <div class="rp-meta"><div class="rp-brand"><svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><path d="M13.5 2 5 14h5.5L9 22l8.5-12H12z" fill="currentColor"/></svg> AI Grid Trader</div>${dateStr}${contactLine ? "<br>" + contactLine : ""}</div>
       </div>
       <div class="rp-kpis">${kpis}</div>
       <h3>${chartTitle}</h3>
@@ -1255,7 +1245,7 @@
       </tbody></table>
       <ul class="rp-notes">
         <li>${annualNote}</li>
-        <li>${r.stack && (r.stack.services || r.stack.capacity) ? `Grid services at ${CUR}${state.svc} per MW per hour${MARKET_INFO[state.p] && state.svc === MARKET_DEFAULTS[state.p].svc ? " (${SV.year} market average)" : ""}; capacity payments are an assumption.` : "Energy arbitrage only; grid services and capacity payments are not included."}${MARKET_INFO[state.p] && state.capex === MARKET_DEFAULTS[state.p].capex ? ` Installed cost: ${esc(MARKET_INFO[state.p].cost)}.` : ""} Lifetime: health falls 20% over ${state.clife.toLocaleString("en-US")} cycles plus 1% a year; new cells at ${CUR}${state.aug}/kWh below 80% health; O&amp;M 1.5% of installed cost a year; ${state.itc ? `${state.itc}% investment tax credit on the installed cost; no other tax` : "no tax"} or financing.</li>
+        <li>${r.stack && (r.stack.services || r.stack.capacity) ? `Grid services at ${CUR}${state.svc} per MW per hour${MARKET_INFO[state.p] && state.svc === MARKET_DEFAULTS[state.p].svc ? ` (${SV.year} market average)` : ""}; capacity payments are an assumption.` : "Energy arbitrage only; grid services and capacity payments are not included."}${MARKET_INFO[state.p] && state.capex === MARKET_DEFAULTS[state.p].capex ? ` Installed cost: ${esc(MARKET_INFO[state.p].cost)}.` : ""} Lifetime: health falls 20% over ${state.clife.toLocaleString("en-US")} cycles plus 1% a year; new cells at ${CUR}${state.aug}/kWh below 80% health; O&amp;M 1.5% of installed cost a year; ${state.itc ? `${state.itc}% investment tax credit on the installed cost; no other tax` : "no tax"} or financing.</li>
         <li>Battery wear is charged at the stated cost per full cycle. Forecast error is simulated on top of actual prices.</li>
         <li>Illustrative estimate, not a financial forecast or investment advice.</li>
       </ul>
@@ -1263,35 +1253,27 @@
   }
 
   // ------------------------------------------------------------------------------------
-  // 13. Wire everything up
+  // Wire everything up
   // ------------------------------------------------------------------------------------
   function init() {
     if (new URLSearchParams(location.search).has("embed")) document.body.classList.add("embed");
     if (state.p === "upload" || !(SIM[state.p] || REAL[state.p])) state.p = DEFAULTS.p;
     buildControls();
     syncControls();
-    updateThemeButton();
     render();
 
     if (!fsRequest) $("btn-present").hidden = true;
-    // Offline support: cache the app after the first visit (only over http/https, not file://).
-    if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
-      // When a new release takes over from an older one, reload once so the page and its files
-      // match (the scenario lives in the URL, so nothing is lost; booth auto-play restarts itself).
-      const updating = !!navigator.serviceWorker.controller;
-      let reloaded = false;
-      navigator.serviceWorker.addEventListener("controllerchange", () => {
-        if (updating && !reloaded && !(kiosk.on && !kiosk.auto)) { reloaded = true; location.reload(); }
-      });
-      navigator.serviceWorker.register("sw.js").catch(() => {});
-    }
+    // A new release reloads open pages once (site.js). The scenario lives in the URL, so nothing
+    // is lost, but a presenter who started auto-play by hand is not interrupted.
+    window.Site.canReload = () => !(kiosk.on && !kiosk.auto);
 
     $("btn-share").addEventListener("click", share);
     $("btn-present").addEventListener("click", togglePresent);
     $("btn-shuffle").addEventListener("click", newDay);
     const dataYear = (Object.values(REAL)[0] || {}).year;
     if (dataYear) document.querySelectorAll(".data-year").forEach((el) => { el.textContent = dataYear; });
-    $("btn-theme").addEventListener("click", toggleTheme);
+    document.addEventListener("site:theme", onThemeChange);
+    $("explain-close").addEventListener("click", hideExplain);
     $("explain-first").addEventListener("click", () => { const s = last && tradeStarts(last); if (s && s.length) showExplain(s[0], true); });
     $("btn-play").addEventListener("click", () => (kiosk.on ? stopKiosk() : startKiosk()));
     $("btn-report").addEventListener("click", openReportDialog);
@@ -1346,10 +1328,9 @@
       else if (/^h$/i.test(e.key)) setMode(state.mode === "forecast" ? "hindsight" : "forecast");
       else if (/^f$/i.test(e.key)) togglePresent();
       else if (/^k$/i.test(e.key)) (kiosk.on ? stopKiosk() : startKiosk());
-      else if (/^t$/i.test(e.key)) toggleTheme();
+      else if (/^t$/i.test(e.key)) window.Site.toggleTheme();
     });
 
-    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { updateThemeButton(); scheduleRender(); });
     window.addEventListener("hashchange", () => {
       const next = readState();
       if (JSON.stringify(next) !== JSON.stringify(state)) { state = next; syncControls(); scheduleRender(); }

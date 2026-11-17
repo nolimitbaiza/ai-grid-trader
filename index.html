@@ -3,22 +3,41 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Baizak Isaev</title>
-  <!-- Old demo links (shared scenarios, booth mode, embeds) used to point here: send them to the demo. -->
+  <title>Baizak Isaev · Renewable energy and battery software</title>
+  <!-- Old demo links (shared scenarios, auto-play, embeds) used to point here: send them to the demo. -->
   <script>(function(){var s=location.search,h=location.hash;if(/(^|[#&])p=/.test(h)||/[?&](kiosk|embed)\b/.test(s))location.replace("ai-grid-trader"+s+h);})();</script>
-  <meta name="description" content="Baizak Isaev: student at North American University, interested in renewable energy. Creator of AI Grid Trader.">
+  <meta name="description" content="Baizak Isaev is a student at North American University focused on renewable energy, and the creator of AI Grid Trader, an interactive battery-trading demo on real market prices.">
   <meta name="author" content="Baizak Isaev">
+  <!-- Link previews (LinkedIn, Slack, email, X) -->
   <meta property="og:type" content="profile">
+  <meta property="og:site_name" content="Baizak Isaev">
   <meta property="og:url" content="https://baizakisaev.com/">
   <meta property="og:title" content="Baizak Isaev">
-  <meta property="og:description" content="Student at North American University, interested in renewable energy. Creator of AI Grid Trader.">
+  <meta property="og:description" content="Student at North American University focused on renewable energy. Creator of AI Grid Trader.">
   <meta property="og:image" content="https://baizakisaev.com/assets/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="AI Grid Trader: a battery trading chart with buy and sell decisions">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="canonical" href="https://baizakisaev.com/">
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#0c0a09">
   <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230c0a09'/%3E%3Cpath d='M18 5 9 18h6l-2 9 9-13h-6z' fill='%23fff'/%3E%3C/svg%3E">
+  <!-- Who this site is about, for search engines. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "name": "Baizak Isaev",
+    "url": "https://baizakisaev.com/",
+    "image": "https://baizakisaev.com/assets/img/profile.jpg",
+    "affiliation": { "@type": "CollegeOrUniversity", "name": "North American University" },
+    "knowsAbout": ["Renewable energy", "Battery energy storage", "Electricity markets"],
+    "sameAs": ["https://www.linkedin.com/in/baizakisaev/", "https://github.com/nolimitbaiza"]
+  }
+  </script>
+  <!-- Apply the saved light/dark choice before first paint (no flash). -->
   <script>try{var t=localStorage.getItem("agt-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
   <link rel="stylesheet" href="assets/style.css?v=__BUILD__">
 </head>
@@ -32,8 +51,8 @@
       <span class="brand-name">Baizak Isaev</span>
     </a>
     <nav class="actions" aria-label="Site">
-      <a class="btn" href="#project"><span>Project</span></a>
-      <a class="btn" href="#contact"><span>Contact</span></a>
+      <a class="btn" href="#project">Project</a>
+      <a class="btn" href="#contact">Contact</a>
       <button class="btn btn-icon" id="btn-theme" type="button" aria-label="Switch theme" title="Switch light / dark"></button>
     </nav>
   </header>
@@ -54,7 +73,7 @@
       <div class="card">
         <p class="kicker">Studying</p>
         <h2>North American University</h2>
-        <p class="note">Currently studying here.</p>
+        <p class="note">Alongside my studies, I build software that explores how the power grid works.</p>
       </div>
       <div class="card">
         <p class="kicker">Interested in</p>
@@ -66,7 +85,9 @@
     <section id="project" class="projects">
       <h2 class="section-title">Project</h2>
       <a class="card project-card" href="ai-grid-trader">
-        <img class="project-shot" src="assets/img/project-chart.png?v=__BUILD__" width="1515" height="831" loading="lazy"
+        <img class="project-shot only-light" src="assets/img/project-chart.png?v=__BUILD__" width="1551" height="839" loading="lazy"
+             alt="AI Grid Trader: a 48-hour trading chart with the AI's buy and sell decisions">
+        <img class="project-shot only-dark" src="assets/img/project-chart-dark.png?v=__BUILD__" width="1551" height="839" loading="lazy"
              alt="AI Grid Trader: a 48-hour trading chart with the AI's buy and sell decisions">
         <div class="project-body">
           <p class="kicker">Interactive demo</p>
@@ -80,10 +101,11 @@
     </section>
 
     <section class="card contact" id="contact">
-      <div class="contact-text">
+      <div>
         <p class="kicker">Get in touch</p>
         <h2>Let's talk energy</h2>
-        <p class="note">Questions about the project or renewable energy? I'd be glad to hear from you.</p>
+        <p class="note">Working on energy storage or renewables? I'm open to projects and collaborations, and
+          glad to answer questions about AI Grid Trader.</p>
         <a class="contact-email" id="email-text" href="#contact">baizak<span aria-hidden="true"></span>@baizakisaev.com</a>
       </div>
       <div class="contact-links">
@@ -105,9 +127,9 @@
 
   <footer class="wrap">
     <span>© 2026 Baizak Isaev</span>
-    <span><a href="ai-grid-trader">AI Grid Trader</a> · <a href="https://github.com/nolimitbaiza">GitHub</a></span>
+    <span><a href="ai-grid-trader">AI Grid Trader</a> · <a href="https://www.linkedin.com/in/baizakisaev/" target="_blank" rel="noopener">LinkedIn</a> · <a href="https://github.com/nolimitbaiza" target="_blank" rel="noopener">GitHub</a></span>
   </footer>
 
-  <script src="assets/about.js?v=__BUILD__"></script>
+  <script src="assets/site.js?v=__BUILD__"></script>
 </body>
 </html>

@@ -5,7 +5,7 @@
  * function. The same code runs:
  *   - in the page (window.GridEngine),
  *   - in a background Web Worker for the full-year simulation (built from createEngine's source,
- *     so it also works when index.html is opened straight from disk), and
+ *     so it also works when the page is opened straight from disk), and
  *   - in Node for the automated tests (module.exports).
  *
  * Reward per 15-minute step = arbitrage cash − battery wear − penalty for starting a new trade run.
@@ -592,7 +592,7 @@ function createEngine() {
   // Finds a price column (and timestamps if present) and resamples to 15 minutes.
   // Keeps up to about one year (366 days) so the full-year view can use it.
   function parseUpload(text, filename) {
-    const lines = text.replace(/^﻿/, "").split(/\r?\n/).filter((l) => l.trim());
+    const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/).filter((l) => l.trim());
     if (lines.length < 3) throw new Error("That file looks empty.");
     const delim = [",", ";", "\t"].reduce((a, d) => (lines[0].split(d).length > lines[0].split(a).length ? d : a), ",");
     const split = (l) => l.split(delim).map((c) => c.trim().replace(/^"(.*)"$/, "$1").trim());

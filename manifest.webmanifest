@@ -13,6 +13,6 @@
     { "src": "assets/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
-    { "name": "Auto-play (booth mode)", "short_name": "Auto-play", "url": "ai-grid-trader?kiosk=1" }
+    { "name": "Auto-play (kiosk mode)", "short_name": "Auto-play", "url": "ai-grid-trader?kiosk=1" }
   ]
 }

@@ -1,5 +1,5 @@
-"""Local web server with the same clean URLs as the live site (Caddyfile):
-/ is the home page and /ai-grid-trader serves ai-grid-trader.html.
+"""Local web server that behaves like the live site (see Caddyfile): clean URLs, so / is the
+home page and /ai-grid-trader serves ai-grid-trader.html, and unknown addresses get 404.html.
 
 Usage: python tools/serve.py [port]        (default 8600, serves the repository folder)
 """
@@ -19,6 +19,18 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if not os.path.exists(local) and os.path.exists(local + ".html"):
             return local + ".html"
         return local
+
+    def send_error(self, code, message=None, explain=None):
+        page = Path(self.directory) / "404.html"
+        if code != 404 or not page.exists():
+            return super().send_error(code, message, explain)
+        body = page.read_bytes()
+        self.send_response(404)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        if self.command != "HEAD":
+            self.wfile.write(body)
 
     def log_message(self, *args):
         pass

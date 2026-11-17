@@ -1,4 +1,4 @@
-# ⚡ AI Grid Trader
+# AI Grid Trader
 
 [![Tests](https://github.com/nolimitbaiza/ai-grid-trader/actions/workflows/test.yml/badge.svg)](https://github.com/nolimitbaiza/ai-grid-trader/actions/workflows/test.yml)
 [![Live demo](https://img.shields.io/badge/live%20demo-baizakisaev.com%2Fai--grid--trader-0c0a09)](https://baizakisaev.com/ai-grid-trader)
@@ -11,7 +11,7 @@ as a real cost, so it never wears the battery out on trades that aren't worth it
 simulated markets, on a full year of real prices from California, Germany and South Australia, or
 on your own price file.
 
-### ▶ [Live demo: baizakisaev.com/ai-grid-trader](https://baizakisaev.com/ai-grid-trader) · [About me: baizakisaev.com](https://baizakisaev.com)
+**[Live demo: baizakisaev.com/ai-grid-trader](https://baizakisaev.com/ai-grid-trader)** · [About me: baizakisaev.com](https://baizakisaev.com)
 
 [![AI Grid Trader: the 48-hour trading view with buy and sell decisions](assets/og.png)](https://baizakisaev.com/ai-grid-trader)
 
@@ -42,14 +42,14 @@ Built by **Baizak Isaev**, a student at North American University interested in 
   and wear, and what actually happened.
 - **The whole business case:** grid services, capacity payments and co-located solar on top of
   trading, plus 15 years of battery health, replacement cells, NPV, IRR and payback.
-- **Ready for a conference booth:** auto-play kiosk mode, a one-page PDF business case, shareable
+- **Ready to present:** auto-play kiosk mode, a one-page PDF business case, shareable
   scenario links, light and dark themes, works offline.
 
 ## Presenting it
 
 | To… | Do this |
 |---|---|
-| Run it unattended on a booth screen | Open **[baizakisaev.com/ai-grid-trader?kiosk=1](https://baizakisaev.com/ai-grid-trader?kiosk=1)**. It goes full-window and auto-plays every market while the headline numbers count up, with a QR code to LinkedIn in the corner. Scrolling keeps it playing; a tap, click or key hands control to the visitor; after 60 s idle it starts again. |
+| Run it unattended on a screen | Open **[baizakisaev.com/ai-grid-trader?kiosk=1](https://baizakisaev.com/ai-grid-trader?kiosk=1)**. It goes full-window and auto-plays every market while the headline numbers count up, with a QR code to LinkedIn in the corner. Scrolling keeps it playing; a tap, click or key hands control to the visitor; after 60 s idle it starts again. |
 | Start or stop auto-play by hand | Click **Auto-play**, or press **K** |
 | Switch market | Click a chip, or press **1–7** (four simulated, then California, Germany, South Australia) |
 | Show a different 48 hours | Click **New day** or press **N** (real markets: or pick dates from the menu) |
@@ -253,10 +253,14 @@ The site is static: plain HTML, CSS and JavaScript with no build step.
   the home page is the About me page (`index.html`), with the demo at
   [/ai-grid-trader](https://baizakisaev.com/ai-grid-trader) (`ai-grid-trader.html`). The
   `Dockerfile` serves the website files with [Caddy](https://caddyserver.com) (`Caddyfile`: clean
-  URLs, compression, caching, Railway's `$PORT`); tools, tests and the prototype aren't published.
+  URLs, compression, caching, security headers, a "Page not found" page, Railway's `$PORT`);
+  tools, tests and the prototype aren't published. The image build validates the server
+  configuration, and GitHub builds and smoke-tests the same image on every push, so a broken
+  configuration fails before it reaches the live site.
   Each deploy stamps a build number into file addresses (`style.css?v=…`, the `__BUILD__`
   placeholder) and the offline cache, so browsers and Cloudflare never mix a new page with old
   files; open pages reload once when a new release takes over. `tools/upgrade_check.py` tests this.
+  `robots.txt` and `sitemap.xml` point search engines at the two pages.
   Old links keep working: shared scenarios and `?kiosk=1` / `?embed=1` on the home page open the
   demo, and `/about.html` goes to the home page.
   Deploy with the [Railway CLI](https://docs.railway.com/guides/cli) by running `railway up` in the
@@ -303,10 +307,23 @@ node --test tests/engine.test.js
   a tax credit lowers the upfront cost but not O&M.
 - Every AI trade can be explained, with consistent numbers.
 
-GitHub runs these on every push (see the **Actions** tab), together with `tools/browser_check.py`:
-the demo and the home page in Firefox, Chromium, WebKit (Safari's engine), an iPad and offline,
-including the full-year simulation, revenue streams, lifetime view, "Why this trade?" and the
-accessibility audit. Screenshots are attached to each run.
+GitHub runs these on every push (see the **Actions** tab), together with:
+
+- `tools/browser_check.py`: the demo and the home page in Firefox, Chromium, WebKit (Safari's
+  engine), an iPad and offline, including the full-year simulation, revenue streams, lifetime
+  view, "Why this trade?", the business-case PDF, the "Page not found" page and the accessibility
+  audit. Screenshots are attached to each run.
+- `tools/upgrade_check.py`: a returning visitor gets each new release without a manual refresh.
+- A build and smoke test of the production image (`Dockerfile` and `Caddyfile`).
+
+To run the browser checks yourself:
+
+```bash
+pip install playwright && python -m playwright install chromium firefox webkit
+python tools/serve.py &
+python tools/browser_check.py
+python tools/upgrade_check.py
+```
 
 **Rebuilding the market data by hand:**
 
@@ -319,30 +336,35 @@ python tools/build_services.py raw --year 2025  # needs: pip install openpyxl
 **Repository layout:**
 
 ```
-index.html, assets/about.js Home page: about me and the project
+index.html                  Home page: about me, the project, contact
 ai-grid-trader.html         The demo (served at /ai-grid-trader)
+404.html                    "Page not found" page (self-contained)
 about.html                  Redirect from the old About address to the home page
+assets/site.js              Shared by both pages: light/dark switch, contact email, offline support
 assets/engine.js            The model: markets, RL agent, forecasts, benchmarks, accounting, full year
-assets/app.js               The page: controls, charts, full-year worker, kiosk, PDF, sharing
+assets/app.js               The demo page: controls, charts, full-year worker, kiosk, PDF, sharing
 assets/style.css            Minimal light/dark theme and the printable business case
 assets/data/markets.js      Index of the real markets (loaded with the page)
 assets/data/prices-*.js     A full year of 15-minute prices per market (loaded on demand)
 assets/data/services.js     Yearly grid-services price averages (the defaults)
 assets/vendor/              Plotly.js (bundled for offline use)
-assets/img/                 Profile photo and LinkedIn QR code
+assets/img/                 Profile photo, project screenshots (light and dark), LinkedIn QR code
 assets/icons/, manifest.webmanifest, sw.js   Installable app + offline cache
 assets/og.png               Link-preview image
+robots.txt, sitemap.xml     For search engines
 Dockerfile, Caddyfile       Hosting on Railway
 tools/fetch_data.py         Downloads a year of public market data
 tools/build_markets.py      Rebuilds the real-price data files
 tools/build_services.py     Rebuilds the grid-services price averages
 tools/build_assets.py       Rebuilds the app icons and QR code
 tools/build_og.py           Rebuilds the link-preview image
-tools/serve.py              Local dev server with clean URLs
+tools/build_project_shot.py Rebuilds the home page's project screenshots (light and dark)
+tools/serve.py              Local dev server with clean URLs and the "Page not found" page
 tools/browser_check.py      Cross-browser and accessibility checks
 tools/upgrade_check.py      Returning visitors get each new release (no stale cached files)
 tests/engine.test.js        Automated model tests
-.github/workflows/          test.yml (every push), refresh-data.yml (monthly data refresh)
+.github/workflows/          test.yml (every push: model, browsers, production image),
+                            refresh-data.yml (monthly data refresh)
 streamlit_app/              Earlier analyst prototype in Python (Streamlit)
 LICENSE.md                  PolyForm Noncommercial 1.0.0
 ```

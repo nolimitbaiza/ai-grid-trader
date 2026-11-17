@@ -7,7 +7,7 @@
  * Versioning: the Dockerfile replaces __BUILD__ with a new stamp on every deploy. That renames this
  * cache and changes the address of every stamped file (style.css?v=…), so a new release is never
  * mixed with old copies held by the browser or by a CDN such as Cloudflare. The pages reload once
- * when a new release takes over (about.js / app.js; a worker-side client.navigate() crashed Chromium).
+ * when a new release takes over (site.js; a worker-side client.navigate() crashed Chromium).
  */
 const BUILD = "__BUILD__";
 const CACHE = `agt-${BUILD}`;
@@ -17,7 +17,7 @@ const ASSETS = [
   "ai-grid-trader",                       // the demo (clean URL for ai-grid-trader.html)
   "manifest.webmanifest",
   "assets/style.css" + V,
-  "assets/about.js" + V,
+  "assets/site.js" + V,
   "assets/engine.js" + V,
   "assets/app.js" + V,
   "assets/data/markets.js" + V,
@@ -27,6 +27,7 @@ const ASSETS = [
   "assets/data/prices-sa.js" + V,
   "assets/img/profile.jpg" + V,
   "assets/img/project-chart.png" + V,
+  "assets/img/project-chart-dark.png" + V,
   "assets/vendor/plotly-basic-2.35.2.min.js",
   "assets/img/qr-linkedin.svg",
   "assets/icons/icon-192.png",

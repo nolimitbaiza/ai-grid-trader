@@ -5,11 +5,15 @@ Usage: serve the repo locally (python tools/serve.py), then
 Needs: pip install playwright && python -m playwright install chromium firefox webkit
 Exit code is non-zero if any check fails.
 """
+import re
 import sys
 import tempfile
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
+
+# Results include symbols such as "€" and "−"; a Windows console may not be able to print them.
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 URL = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8600/"
 SHOTS = Path(sys.argv[2]) if len(sys.argv) > 2 else Path(tempfile.gettempdir()) / "agt-shots"
@@ -95,18 +99,24 @@ def run(pw, label, browser_type, **ctx):
     after = page.evaluate("getComputedStyle(document.body).backgroundColor")
     check("light/dark switch changes theme", before != after, f"{before} -> {after}")
 
-    page.set_input_files("#file-input", files=[{"name": "prices.csv", "mimeType": "text/csv", "buffer": CSV.encode()}])
-    page.wait_for_timeout(500)
-    check("CSV upload adds 'Your data'", page.locator(".chip[data-key=upload]").count() == 1)
-
+    # Business case for Germany (a real market, so every part of the page is exercised).
     page.click("#btn-report")
     page.fill("[name=client]", "Test Client")
     page.click(".dialog .btn-primary")
     page.wait_for_function("window.__printed === true", timeout=15000)
+    report = page.evaluate("document.getElementById('report').textContent")
     check("business case builds (chart image + print)", page.locator("#report img").count() == 1)
-    check("business case defaults to your name", "Baizak Isaev" in page.inner_text("#report"))
+    check("business case defaults to your name", "Baizak Isaev" in report)
+    check("business case text is fully filled in", "${" not in report and "undefined" not in report
+          and re.search(r"\d{4} market average", report) is not None)
+
+    page.set_input_files("#file-input", files=[{"name": "prices.csv", "mimeType": "text/csv", "buffer": CSV.encode()}])
+    page.wait_for_timeout(500)
+    check("CSV upload adds 'Your data'", page.locator(".chip[data-key=upload]").count() == 1)
 
     check("project page has no 'Built by' card", page.locator("#contact").count() == 0)
+    names = [page.get_attribute(f"#btn-{b}", "aria-label") for b in ("play", "report", "share", "present", "theme")]
+    check("header buttons have accessible names", all(names), str(names))
 
     about = context.new_page()
     about.on("pageerror", lambda e: errors.append(str(e)))
@@ -124,12 +134,27 @@ def run(pw, label, browser_type, **ctx):
     check("old shared demo links still open the demo", "ai-grid-trader" in old.url and "p=de" in old.url, old.url)
     old.goto(URL + "about.html", wait_until="networkidle")
     check("old about.html link reaches the home page", old.locator(".about-hero").count() == 1, old.url)
+    missing = old.goto(URL + "no-such-page", wait_until="load")
+    check("unknown address shows the 'Page not found' page", missing.status == 404 and "Page not found" in old.inner_text("body"),
+          f"status {missing.status}")
     old.close()
     if label.startswith("Chromium"):
         about.add_script_tag(url="https://cdn.jsdelivr.net/npm/axe-core@4.10.2/axe.min.js")
         found = about.evaluate("async () => (await axe.run(document, {resultTypes: ['violations']})).violations.map(v => v.id + ' x' + v.nodes.length)")
         check("Home page: no accessibility violations", not found, ", ".join(found))
     about.screenshot(path=str(SHOTS / f"{label.replace(' ', '_')}_about.png"), full_page=True)
+    # The project screenshot has a light and a dark version; the dark theme must show the dark one.
+    about.evaluate("document.documentElement.setAttribute('data-theme', 'dark')")
+    about.locator(".project-card").scroll_into_view_if_needed()
+    try:
+        about.wait_for_function("(() => { const i = document.querySelector('.project-shot.only-dark'); return i.complete && i.naturalWidth > 0; })()", timeout=10000)
+    except Exception:
+        pass
+    shots = about.evaluate("""() => Object.fromEntries(['light', 'dark'].map((t) => {
+        const img = document.querySelector('.project-shot.only-' + t);
+        return [t, getComputedStyle(img).display !== 'none' && img.naturalWidth > 0];
+    }))""")
+    check("Home page: dark theme shows the dark screenshot", shots == {"light": False, "dark": True}, str(shots))
     about.close()
 
     page.click("#btn-play")
@@ -149,6 +174,13 @@ def run(pw, label, browser_type, **ctx):
     check("tap/click exits auto-play", not page.evaluate("document.body.classList.contains('kiosk')"))
 
     page.screenshot(path=str(SHOTS / f"{label.replace(' ', '_')}.png"), full_page=True)
+    if label.startswith("Chromium"):
+        # Phone width: header buttons collapse to icons, but "New day" keeps its label.
+        page.set_viewport_size({"width": 390, "height": 800})
+        page.wait_for_timeout(300)
+        check("phone width: header labels hidden, 'New day' label kept",
+              not page.is_visible("#btn-share .lbl") and page.is_visible("#btn-shuffle .lbl"))
+        page.screenshot(path=str(SHOTS / "Chromium_phone.png"))
     check("no JavaScript errors", not errors, "; ".join(errors[:3]))
     browser.close()
 

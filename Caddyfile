@@ -13,6 +13,15 @@
 	# Clean URLs: /ai-grid-trader serves ai-grid-trader.html.
 	try_files {path} {path}.html
 
+	# Standard security headers. No X-Frame-Options: the demo is meant to be embedded (?embed=1).
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+
 	# Caching: browsers and CDNs (Cloudflare) must re-check every file with the server, so a new
 	# release is never mixed with old copies. Files a page loads also carry a ?v= build stamp
 	# (see Dockerfile). Plotly's filename includes its version, so it can be kept for a year.
@@ -22,4 +31,17 @@
 	header @vendor Cache-Control "public, max-age=31536000, immutable"
 
 	file_server
+
+	# Unknown addresses get the site's own "Page not found" page (still with status 404).
+	handle_errors {
+		@notFound `{err.status_code} == 404`
+		handle @notFound {
+			rewrite * /404.html
+			header Cache-Control "no-cache"
+			file_server
+		}
+		handle {
+			respond "{err.status_code} {err.status_text}"
+		}
+	}
 }

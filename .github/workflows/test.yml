@@ -1,5 +1,7 @@
-# Runs the model's automated checks on every push and pull request.
-# See tests/engine.test.js for what is checked.
+# Runs on every push and pull request:
+#   test       the trading model (tests/engine.test.js) and syntax checks
+#   browsers   both pages in real browsers (tools/browser_check.py) and the release-upgrade check
+#   container  the production image: it builds, the server config is valid, the addresses answer
 name: Tests
 
 on:
@@ -21,6 +23,7 @@ jobs:
         run: |
           node --check assets/engine.js
           node --check assets/app.js
+          node --check assets/site.js
           node --check sw.js
 
       - name: Model tests
@@ -34,8 +37,8 @@ jobs:
         run: python -m py_compile tools/*.py streamlit_app/app.py
 
   browsers:
-    # The page itself in Firefox, Chromium and WebKit (Safari's engine), plus an iPad and offline.
-    # See tools/browser_check.py. Screenshots are kept as a downloadable artifact.
+    # The pages themselves in Firefox, Chromium and WebKit (Safari's engine), plus an iPad and
+    # offline. Screenshots are kept as a downloadable artifact.
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -64,3 +67,40 @@ jobs:
         with:
           name: browser-screenshots
           path: shots/
+
+  container:
+    # Builds the image Railway runs (Dockerfile + Caddyfile) and checks the addresses the live
+    # site must answer, so a broken server configuration is caught before it is deployed.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the image
+        run: docker build -t site .
+
+      - name: Smoke test
+        run: |
+          docker run -d --name site -p 8080:8080 site
+          sleep 2
+          expect() {   # expect <status> <path> [text the page must contain]
+            status=$(curl -s -o body.txt -w "%{http_code}" "http://localhost:8080$2")
+            if [ "$status" != "$1" ]; then echo "FAIL $2: status $status, expected $1"; exit 1; fi
+            if [ -n "$3" ] && ! grep -q "$3" body.txt; then echo "FAIL $2: page lacks '$3'"; exit 1; fi
+            echo "ok   $2 -> $status"
+          }
+          expect 200 /                    "About me"
+          expect 200 /ai-grid-trader      "chart-main"
+          expect 301 /about.html
+          expect 301 /ai-grid-trader.html
+          expect 200 /robots.txt          "Sitemap"
+          expect 200 /sitemap.xml         "ai-grid-trader"
+          expect 404 /no-such-page        "Page not found"
+          # Every build stamp was filled in, and the security headers are sent.
+          if curl -s http://localhost:8080/ | grep -q "__BUILD__"; then echo "FAIL: unfilled build stamp"; exit 1; fi
+          curl -sI http://localhost:8080/ | grep -qi "x-content-type-options: nosniff" || { echo "FAIL: security headers missing"; exit 1; }
+          echo "ok   build stamps and security headers"
+
+      - name: Server log
+        if: always()
+        run: docker logs site || true

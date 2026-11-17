@@ -5,7 +5,7 @@
 =====================================================================================
 
  NOTE: This Streamlit app is the original prototype. It uses simulated prices and a
- perfect-foresight agent only. The main product is the web demo (index.html at the
+ perfect-foresight agent only. The main product is the web demo (ai-grid-trader.html at the
  repository root, live at https://baizakisaev.com/ai-grid-trader), which adds
  real market data for a full year, forecast-driven trading, a hindsight benchmark and
  automated tests. Results from the two versions are not directly comparable.
