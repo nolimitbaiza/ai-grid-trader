@@ -1,6 +1,7 @@
 # Web server for the Railway deployment (see Dockerfile). Railway provides $PORT.
 #   /                 home page (about me)
 #   /ai-grid-trader   the AI Grid Trader demo (ai-grid-trader.html)
+#   /ai-grid-trader-case-study   the project write-up
 :{$PORT:8080} {
 	root * /srv
 	encode zstd gzip
@@ -9,6 +10,7 @@
 	redir /about.html / permanent
 	redir /ai-grid-trader.html /ai-grid-trader{query} permanent
 	redir /ai-grid-trader/ /ai-grid-trader{query} permanent
+	redir /ai-grid-trader-case-study.html /ai-grid-trader-case-study permanent
 
 	# Clean URLs: /ai-grid-trader serves ai-grid-trader.html.
 	try_files {path} {path}.html

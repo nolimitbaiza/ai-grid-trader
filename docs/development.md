@@ -97,6 +97,7 @@ python tools/build_services.py raw --year 2025  # needs: pip install openpyxl
 ```
 index.html                  Home page: about me, the project, contact
 ai-grid-trader.html         The demo (served at /ai-grid-trader)
+ai-grid-trader-case-study.html  The project write-up (served at /ai-grid-trader-case-study)
 404.html                    "Page not found" page (self-contained)
 about.html                  Redirect from the old About address to the home page
 assets/site.js              Shared by both pages: light/dark switch, contact email, offline support
@@ -106,6 +107,7 @@ assets/style.css            Minimal light/dark theme and the printable business 
 assets/home.css             Home page layout, type scale, accent colour and motion
 assets/home.js              Home page scroll reveals, header state, count-up numbers, copy email
 assets/fonts/               Inter and JetBrains Mono (self-hosted Latin subsets, OFL)
+assets/Baizak-Isaev-Resume.pdf  Résumé linked from the header and contact (web copy: no phone number)
 assets/data/markets.js      Index of the real markets (loaded with the page)
 assets/data/prices-*.js     A full year of 15-minute prices per market (loaded on demand)
 assets/data/services.js     Yearly grid-services price averages (the defaults)

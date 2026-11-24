@@ -15,6 +15,7 @@ const V = `?v=${BUILD}`;
 const ASSETS = [
   "./",                                   // home page (about me)
   "ai-grid-trader",                       // the demo (clean URL for ai-grid-trader.html)
+  "ai-grid-trader-case-study",            // the write-up
   "manifest.webmanifest",
   "assets/style.css" + V,
   "assets/site.js" + V,
@@ -32,6 +33,7 @@ const ASSETS = [
   "assets/img/profile.jpg" + V,
   "assets/img/project-chart.png" + V,
   "assets/img/project-chart-dark.png" + V,
+  "assets/Baizak-Isaev-Resume.pdf" + V,
   "assets/vendor/plotly-basic-2.35.2.min.js",
   "assets/img/qr-linkedin.svg",
   "assets/icons/icon-192.png",

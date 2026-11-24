@@ -129,6 +129,16 @@ def run(pw, label, browser_type, **ctx):
     check("Home page: photo loads", about.evaluate("(() => { const i = document.querySelector('.hero-id .avatar img'); return !!i && i.naturalWidth > 0; })()"))
     check("Home page: hero shows the project's numbers", about.locator(".proof .metric").count() == 3)
     check("Home page: copy-email button present", about.locator("[data-copy-email]").count() == 1)
+    check("Home page: degree and graduation year shown", "Computer Science" in words and "May 2027" in words)
+    resume = about.evaluate("""async () => {
+        const links = [...document.querySelectorAll('a[href*="Baizak-Isaev-Resume.pdf"]')];
+        const r = links.length ? await fetch(links[0].href) : null;
+        return { header: !!document.querySelector('.site-header a[href*="Resume.pdf"]'),
+                 contact: !!document.querySelector('#contact a[href*="Resume.pdf"]'),
+                 status: r && r.status, type: r && r.headers.get('content-type') };
+    }""")
+    check("Home page: résumé links in header and contact open the PDF",
+          resume["header"] and resume["contact"] and resume["status"] == 200 and "pdf" in (resume["type"] or ""), str(resume))
     # The header's name appears only once the hero's name row has scrolled away.
     brand = "getComputedStyle(document.querySelector('.site-header .brand-link')).visibility"
     at_top = about.evaluate(brand)
@@ -164,10 +174,21 @@ def run(pw, label, browser_type, **ctx):
         }
         scrollTo(0, 0); await new Promise((r) => setTimeout(r, 900));
     }""")
+    try:   # staggered fades can still be finishing
+        about.wait_for_function("[...document.querySelectorAll('[data-reveal]')].every((e) => getComputedStyle(e).opacity === '1')", timeout=4000)
+    except Exception:
+        pass
     hidden = about.evaluate("[...document.querySelectorAll('[data-reveal]')].filter((e) => getComputedStyle(e).opacity !== '1').length")
     check("Home page: every section is visible after scrolling", hidden == 0, f"{hidden} still hidden")
     about.screenshot(path=str(SHOTS / f"{label.replace(' ', '_')}_about.png"), full_page=True)
-    # The project screenshot has a light and a dark version; the dark theme must show the dark one.
+    # The project screenshot has a light and a dark version: exactly one shows in each theme.
+    pair = """() => Object.fromEntries(['light', 'dark'].map((t) => {
+        const img = document.querySelector('.project-media img.only-' + t);
+        return [t, getComputedStyle(img).display !== 'none'];
+    }))"""
+    about.evaluate("document.documentElement.setAttribute('data-theme', 'light')")
+    shown = about.evaluate(pair)
+    check("Home page: light theme shows only the light screenshot", shown == {"light": True, "dark": False}, str(shown))
     about.evaluate("document.documentElement.setAttribute('data-theme', 'dark')")
     about.locator(".project").scroll_into_view_if_needed()
     try:
@@ -179,7 +200,52 @@ def run(pw, label, browser_type, **ctx):
         return [t, getComputedStyle(img).display !== 'none' && img.naturalWidth > 0];
     }))""")
     check("Home page: dark theme shows the dark screenshot", shots == {"light": False, "dark": True}, str(shots))
+    about.evaluate("document.documentElement.removeAttribute('data-theme')")
+    about.click(".project-sub")                    # sits above the card's stretched link
+    about.wait_for_load_state("networkidle")
+    check("Home page: 'Read the case study' opens the case study", about.url.rstrip("/").endswith("ai-grid-trader-case-study"), about.url)
     about.close()
+
+    cs = context.new_page()
+    cs.on("pageerror", lambda e: errors.append(str(e)))
+    cs.goto(URL + "ai-grid-trader-case-study", wait_until="networkidle")
+    sections = cs.evaluate("[...document.querySelectorAll('main section[id]')].map((s) => s.id).join(',')")
+    check("Case study: problem, approach, results, engineering, next", sections == "problem,approach,results,engineering,next,contact", sections)
+    check("Case study: both results tables", cs.locator(".cs-table tbody tr").count() == 6)
+    shown = cs.evaluate("[...document.querySelectorAll('.cs-figure img')].filter((i) => getComputedStyle(i).display !== 'none').length")
+    check("Case study: one chart screenshot shown", shown == 1, f"{shown} shown")
+    check("Case study: header name always shown", cs.evaluate("getComputedStyle(document.querySelector('.site-header .brand-link')).visibility") == "visible")
+    check("Case study: email link filled in", (cs.get_attribute("#email-link", "href") or "").startswith("mailto:"))
+    if label.startswith("Chromium"):
+        cs.add_script_tag(url="https://cdn.jsdelivr.net/npm/axe-core@4.10.2/axe.min.js")
+        audit = "async () => (await axe.run(document, {resultTypes: ['violations']})).violations.map(v => v.id + ' x' + v.nodes.length)"
+        for theme in ("light", "dark"):
+            cs.evaluate(f"document.documentElement.setAttribute('data-theme', '{theme}')")
+            cs.wait_for_timeout(400)
+            found = cs.evaluate(audit)
+            check(f"Case study: no accessibility violations ({theme} theme)", not found, ", ".join(found))
+        cs.evaluate("document.documentElement.removeAttribute('data-theme')")
+    cs.evaluate("""async () => {
+        for (let y = 0; y <= document.body.scrollHeight; y += innerHeight / 2) {
+            scrollTo(0, y); await new Promise((r) => setTimeout(r, 120));
+        }
+        scrollTo(0, 0); await new Promise((r) => setTimeout(r, 900));
+    }""")
+    try:   # staggered fades can still be finishing
+        cs.wait_for_function("[...document.querySelectorAll('[data-reveal]')].every((e) => getComputedStyle(e).opacity === '1')", timeout=4000)
+    except Exception:
+        pass
+    hidden = cs.evaluate("[...document.querySelectorAll('[data-reveal]')].filter((e) => getComputedStyle(e).opacity !== '1').length")
+    check("Case study: every section is visible after scrolling", hidden == 0, f"{hidden} still hidden")
+    cs.screenshot(path=str(SHOTS / f"{label.replace(' ', '_')}_case_study.png"), full_page=True)
+    if label.startswith("Chromium"):
+        for page_url in ("", "ai-grid-trader-case-study"):
+            cs.set_viewport_size({"width": 360, "height": 760})
+            cs.goto(URL + page_url, wait_until="networkidle")
+            wide = cs.evaluate("document.documentElement.scrollWidth - innerWidth")
+            check(f"phone width: no sideways scroll ({page_url or 'home'})", wide <= 0, f"{wide}px too wide")
+        cs.screenshot(path=str(SHOTS / "Chromium_phone_case_study.png"), full_page=True)
+    cs.close()
 
     page.click("#btn-play")
     page.wait_for_timeout(3500)
@@ -221,6 +287,8 @@ def offline(pw):
     context.set_offline(True)
     page.goto(URL, wait_until="load")
     check("home page opens with no network", page.locator(".hero").count() == 1)
+    page.goto(URL + "ai-grid-trader-case-study", wait_until="load")
+    check("case study opens with no network", page.locator("#results").count() == 1)
     page.goto(URL + "ai-grid-trader?kiosk=1", wait_until="load")
     page.wait_for_timeout(1500)
     kpis = page.locator("#kpis .value").all_inner_texts()

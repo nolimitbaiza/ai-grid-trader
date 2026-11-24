@@ -6,14 +6,14 @@
   <title>Baizak Isaev · Renewable energy and battery software</title>
   <!-- Old demo links (shared scenarios, auto-play, embeds) used to point here: send them to the demo. -->
   <script>(function(){var s=location.search,h=location.hash;if(/(^|[#&])p=/.test(h)||/[?&](kiosk|embed)\b/.test(s))location.replace("ai-grid-trader"+s+h);})();</script>
-  <meta name="description" content="Baizak Isaev is a student at North American University focused on renewable energy, and the creator of AI Grid Trader, an interactive battery-trading demo on real market prices.">
+  <meta name="description" content="Baizak Isaev is a Computer Science student at North American University (class of 2027) focused on renewable energy, and the creator of AI Grid Trader, an interactive battery-trading demo on real market prices.">
   <meta name="author" content="Baizak Isaev">
   <!-- Link previews (LinkedIn, Slack, email, X) -->
   <meta property="og:type" content="profile">
   <meta property="og:site_name" content="Baizak Isaev">
   <meta property="og:url" content="https://baizakisaev.com/">
   <meta property="og:title" content="Baizak Isaev">
-  <meta property="og:description" content="Student at North American University focused on renewable energy. Creator of AI Grid Trader.">
+  <meta property="og:description" content="Computer Science student at North American University, focused on renewable energy. Creator of AI Grid Trader.">
   <meta property="og:image" content="https://baizakisaev.com/assets/og.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
@@ -35,6 +35,7 @@
     "url": "https://baizakisaev.com/",
     "image": "https://baizakisaev.com/assets/img/profile.jpg",
     "affiliation": { "@type": "CollegeOrUniversity", "name": "North American University" },
+    "homeLocation": { "@type": "Place", "name": "Houston, TX" },
     "knowsAbout": ["Renewable energy", "Battery energy storage", "Electricity markets"],
     "sameAs": ["https://www.linkedin.com/in/baizakisaev/", "https://github.com/nolimitbaiza"]
   }
@@ -64,6 +65,7 @@
         <a class="nav-link" href="#work">Work</a>
         <a class="nav-link" href="#about">About</a>
         <a class="nav-link" href="#contact">Contact</a>
+        <a class="nav-cta" href="assets/Baizak-Isaev-Resume.pdf?v=__BUILD__" target="_blank" rel="noopener" type="application/pdf">Résumé<span class="sr-only"> (PDF, opens in a new tab)</span></a>
         <button class="btn btn-icon" id="btn-theme" type="button" aria-label="Switch light / dark" title="Switch light / dark"></button>
       </nav>
     </div>
@@ -81,7 +83,7 @@
           </span>
           <div>
             <p class="hero-name">Baizak Isaev</p>
-            <p class="hero-role">Student · North American University</p>
+            <p class="hero-role">Computer Science · North American University · Class of 2027</p>
           </div>
         </div>
 
@@ -92,6 +94,7 @@
         <p class="hero-lede" data-enter style="--i:2">
           My latest project, <a href="ai-grid-trader">AI Grid Trader</a>, is an AI agent that trades a
           grid-scale battery on real wholesale electricity prices, and counts battery wear as a real cost.
+          <a href="ai-grid-trader-case-study">Read how it works</a>.
         </p>
 
         <div class="hero-ctas" data-enter style="--i:3">
@@ -157,10 +160,13 @@
             <p class="project-desc">An AI agent that trades a grid-scale battery on real wholesale electricity prices.
               It buys when power is cheap and plentiful, sells when it's scarce, and counts battery wear as a
               real cost so the battery lasts.</p>
-            <span class="project-cta" aria-hidden="true">
-              Open the project
-              <svg class="arrow" viewBox="0 0 16 16" width="16" height="16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </span>
+            <div class="project-links">
+              <span class="project-cta" aria-hidden="true">
+                Open the project
+                <svg class="arrow" viewBox="0 0 16 16" width="16" height="16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <a class="project-sub" href="ai-grid-trader-case-study">Read the case study</a>
+            </div>
           </div>
           <dl class="project-meta">
             <div><dt>Markets</dt><dd>California · Germany · South Australia</dd></div>
@@ -179,13 +185,14 @@
           <h2 class="section-title-v2" id="about-title">Energy, through software.</h2>
         </div>
         <div data-reveal style="--i:1">
-          <p class="lead">I'm a student at North American University with a strong interest in renewable energy.</p>
+          <p class="lead">I'm a Computer Science student at North American University in Houston, graduating in May 2027, with a strong interest in renewable energy.</p>
           <p>Alongside my studies, I build software that explores how the power grid works, especially how
             batteries and smarter software help the grid use more solar and wind power.</p>
           <dl class="facts" data-stagger>
-            <div class="fact"><dt>Studying</dt><dd>North American University</dd></div>
+            <div class="fact"><dt>Studying</dt><dd>BS Computer Science<span>North American University</span></dd></div>
+            <div class="fact"><dt>Graduating</dt><dd>May 2027<span>GPA 3.75 / 4.0</span></dd></div>
+            <div class="fact"><dt>Based in</dt><dd>Houston, TX</dd></div>
             <div class="fact"><dt>Focus</dt><dd>Battery storage &amp; electricity markets</dd></div>
-            <div class="fact"><dt>Building</dt><dd>AI Grid Trader</dd></div>
           </dl>
         </div>
       </div>
@@ -212,6 +219,10 @@
             <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm0 1 8 7 8-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
             Email me
           </a>
+          <a class="btn-v2" href="assets/Baizak-Isaev-Resume.pdf?v=__BUILD__" target="_blank" rel="noopener" type="application/pdf">
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M9.5 1.75H4.25a1 1 0 0 0-1 1v10.5a1 1 0 0 0 1 1h7.5a1 1 0 0 0 1-1V5L9.5 1.75Z M9.5 1.75V5h3.25 M5.75 8.25h4.5M5.75 10.75h3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/></svg>
+            Résumé<span class="sr-only"> (PDF, opens in a new tab)</span>
+          </a>
           <a class="btn-v2" href="https://www.linkedin.com/in/baizakisaev/" target="_blank" rel="noopener">
             <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9.5h4V21H3zM9.5 9.5h3.8v1.6h.06c.53-1 1.84-2.06 3.79-2.06 4.05 0 4.8 2.67 4.8 6.13V21h-4v-5.13c0-1.22-.02-2.8-1.7-2.8-1.71 0-1.97 1.33-1.97 2.71V21h-4z" fill="currentColor"/></svg>
             LinkedIn<span class="sr-only"> (opens in a new tab)</span>
@@ -230,6 +241,8 @@
       <span>© 2026 Baizak Isaev</span>
       <ul>
         <li><a href="ai-grid-trader">AI Grid Trader</a></li>
+        <li><a href="ai-grid-trader-case-study">Case study</a></li>
+        <li><a href="assets/Baizak-Isaev-Resume.pdf?v=__BUILD__" target="_blank" rel="noopener" type="application/pdf">Résumé<span class="sr-only"> (PDF, opens in a new tab)</span></a></li>
         <li><a href="https://www.linkedin.com/in/baizakisaev/" target="_blank" rel="noopener">LinkedIn</a></li>
         <li><a href="https://github.com/nolimitbaiza" target="_blank" rel="noopener">GitHub</a></li>
       </ul>
