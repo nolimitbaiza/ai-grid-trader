@@ -185,6 +185,17 @@ body { font-family: var(--font-sans); font-optical-sizing: auto; }
 }
 .site-header .bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 68px; }
 .site-header .brand-link { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 600; letter-spacing: -0.01em; }
+/* Name handoff: while the hero's own name row is on screen the header doesn't repeat it; once that
+   row slides under the header, the header's name rises in. visibility keeps the hidden link out of
+   the Tab order and screen readers. (.brand-handoff is set in index.html's head; .show-brand by home.js.) */
+.brand-handoff .site-header .brand-link {
+  opacity: 0; visibility: hidden; transform: translate3d(0, 8px, 0);
+  transition: opacity var(--dur) var(--ease-out), transform var(--dur) var(--ease-out), visibility 0s linear var(--dur);
+}
+.brand-handoff .site-header.show-brand .brand-link {
+  opacity: 1; visibility: visible; transform: none;
+  transition: opacity var(--dur) var(--ease-out), transform var(--dur) var(--ease-out), visibility 0s;
+}
 .site-header nav { display: flex; align-items: center; gap: 4px; }
 .nav-link {
   position: relative; display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px;

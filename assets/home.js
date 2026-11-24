@@ -49,6 +49,17 @@
     }).observe(sentinel);
   }
 
+  // Name handoff: show the header's name only once the hero's name row has scrolled under the
+  // header (the top margin is the header's height), and hide it again on the way back up.
+  const heroId = document.querySelector(".hero-id");
+  if (header && heroId && hasIO) {
+    new IntersectionObserver(([entry]) => {
+      header.classList.toggle("show-brand", !entry.isIntersecting);
+    }, { rootMargin: `-${header.offsetHeight}px 0px 0px 0px` }).observe(heroId);
+  } else if (header) {
+    header.classList.add("show-brand");
+  }
+
   // ------------------------------------------------------------------ 3. Scroll-spy
   // Marks the nav link of the section crossing the middle of the viewport.
   const navLinks = [...document.querySelectorAll('.nav-link[href^="#"]')];

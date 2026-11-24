@@ -39,8 +39,9 @@
     "sameAs": ["https://www.linkedin.com/in/baizakisaev/", "https://github.com/nolimitbaiza"]
   }
   </script>
-  <!-- Apply the saved light/dark choice before first paint (no flash). -->
-  <script>try{var t=localStorage.getItem("agt-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+  <!-- Apply the saved light/dark choice before first paint (no flash). "brand-handoff": the header's
+       name stays hidden while the hero shows it (home.js), set here so it never flashes on load. -->
+  <script>if("IntersectionObserver"in window)document.documentElement.classList.add("brand-handoff");try{var t=localStorage.getItem("agt-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
   <!-- Self-hosted fonts, fetched early so text swaps once. -->
   <link rel="preload" href="assets/fonts/inter-latin-var.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/jetbrains-mono-latin-500.woff2" as="font" type="font/woff2" crossorigin>

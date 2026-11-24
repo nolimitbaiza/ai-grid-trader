@@ -129,6 +129,16 @@ def run(pw, label, browser_type, **ctx):
     check("Home page: photo loads", about.evaluate("(() => { const i = document.querySelector('.hero-id .avatar img'); return !!i && i.naturalWidth > 0; })()"))
     check("Home page: hero shows the project's numbers", about.locator(".proof .metric").count() == 3)
     check("Home page: copy-email button present", about.locator("[data-copy-email]").count() == 1)
+    # The header's name appears only once the hero's name row has scrolled away.
+    brand = "getComputedStyle(document.querySelector('.site-header .brand-link')).visibility"
+    at_top = about.evaluate(brand)
+    about.evaluate("scrollTo(0, 600)")
+    about.wait_for_timeout(600)
+    scrolled = about.evaluate(brand)
+    about.evaluate("scrollTo(0, 0)")
+    about.wait_for_timeout(600)
+    check("Home page: header name hidden at top, shown after scrolling, hidden again",
+          (at_top, scrolled, about.evaluate(brand)) == ("hidden", "visible", "hidden"), f"{at_top} / {scrolled}")
     about.click(".project-link")
     about.wait_for_load_state("networkidle")
     check("Home page: project card opens the demo", about.url.split("#")[0].split("?")[0].rstrip("/").endswith("ai-grid-trader") and about.locator("#chart-main").count() == 1, about.url)
