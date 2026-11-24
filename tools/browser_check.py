@@ -122,10 +122,14 @@ def run(pw, label, browser_type, **ctx):
     about.on("pageerror", lambda e: errors.append(str(e)))
     about.goto(URL, wait_until="networkidle")
     text = about.inner_text("main")
-    check("Home page is About me", "North American University" in text and "Renewable energy" in text)
+    words = about.text_content("main")             # as written (inner_text applies CSS uppercase)
+    check("Home page introduces me and the project", "North American University" in words and "AI Grid Trader" in words
+          and "About me" in words)
     check("Home page: business email link", about.get_attribute("#email-link", "href").startswith("mailto:baizak@baizakisaev.com"))
-    check("Home page: photo loads", about.evaluate("(() => { const i = document.querySelector('.avatar-xl img'); return !!i && i.naturalWidth > 0; })()"))
-    about.click(".project-card")
+    check("Home page: photo loads", about.evaluate("(() => { const i = document.querySelector('.hero-id .avatar img'); return !!i && i.naturalWidth > 0; })()"))
+    check("Home page: hero shows the project's numbers", about.locator(".proof .metric").count() == 3)
+    check("Home page: copy-email button present", about.locator("[data-copy-email]").count() == 1)
+    about.click(".project-link")
     about.wait_for_load_state("networkidle")
     check("Home page: project card opens the demo", about.url.split("#")[0].split("?")[0].rstrip("/").endswith("ai-grid-trader") and about.locator("#chart-main").count() == 1, about.url)
     about.go_back(wait_until="networkidle")
@@ -133,7 +137,7 @@ def run(pw, label, browser_type, **ctx):
     old.goto(URL + "#p=de&mode=forecast", wait_until="networkidle")
     check("old shared demo links still open the demo", "ai-grid-trader" in old.url and "p=de" in old.url, old.url)
     old.goto(URL + "about.html", wait_until="networkidle")
-    check("old about.html link reaches the home page", old.locator(".about-hero").count() == 1, old.url)
+    check("old about.html link reaches the home page", old.locator(".hero").count() == 1, old.url)
     missing = old.goto(URL + "no-such-page", wait_until="load")
     check("unknown address shows the 'Page not found' page", missing.status == 404 and "Page not found" in old.inner_text("body"),
           f"status {missing.status}")
@@ -142,16 +146,26 @@ def run(pw, label, browser_type, **ctx):
         about.add_script_tag(url="https://cdn.jsdelivr.net/npm/axe-core@4.10.2/axe.min.js")
         found = about.evaluate("async () => (await axe.run(document, {resultTypes: ['violations']})).violations.map(v => v.id + ' x' + v.nodes.length)")
         check("Home page: no accessibility violations", not found, ", ".join(found))
+    # Sections fade in as they scroll into view: scroll through like a reader, then check that
+    # every one of them ended up visible before taking the full-page screenshot.
+    about.evaluate("""async () => {
+        for (let y = 0; y <= document.body.scrollHeight; y += innerHeight / 2) {
+            scrollTo(0, y); await new Promise((r) => setTimeout(r, 120));
+        }
+        scrollTo(0, 0); await new Promise((r) => setTimeout(r, 900));
+    }""")
+    hidden = about.evaluate("[...document.querySelectorAll('[data-reveal]')].filter((e) => getComputedStyle(e).opacity !== '1').length")
+    check("Home page: every section is visible after scrolling", hidden == 0, f"{hidden} still hidden")
     about.screenshot(path=str(SHOTS / f"{label.replace(' ', '_')}_about.png"), full_page=True)
     # The project screenshot has a light and a dark version; the dark theme must show the dark one.
     about.evaluate("document.documentElement.setAttribute('data-theme', 'dark')")
-    about.locator(".project-card").scroll_into_view_if_needed()
+    about.locator(".project").scroll_into_view_if_needed()
     try:
-        about.wait_for_function("(() => { const i = document.querySelector('.project-shot.only-dark'); return i.complete && i.naturalWidth > 0; })()", timeout=10000)
+        about.wait_for_function("(() => { const i = document.querySelector('.project-media img.only-dark'); return i.complete && i.naturalWidth > 0; })()", timeout=10000)
     except Exception:
         pass
     shots = about.evaluate("""() => Object.fromEntries(['light', 'dark'].map((t) => {
-        const img = document.querySelector('.project-shot.only-' + t);
+        const img = document.querySelector('.project-media img.only-' + t);
         return [t, getComputedStyle(img).display !== 'none' && img.naturalWidth > 0];
     }))""")
     check("Home page: dark theme shows the dark screenshot", shots == {"light": False, "dark": True}, str(shots))
@@ -196,7 +210,7 @@ def offline(pw):
     page.reload(wait_until="networkidle")          # now controlled by the service worker
     context.set_offline(True)
     page.goto(URL, wait_until="load")
-    check("home page opens with no network", page.locator(".about-hero").count() == 1)
+    check("home page opens with no network", page.locator(".hero").count() == 1)
     page.goto(URL + "ai-grid-trader?kiosk=1", wait_until="load")
     page.wait_for_timeout(1500)
     kpis = page.locator("#kpis .value").all_inner_texts()

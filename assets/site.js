@@ -29,10 +29,17 @@
 
   function toggleTheme() {
     const next = theme() === "dark" ? "light" : "dark";
-    root.setAttribute("data-theme", next);
-    try { localStorage.setItem("agt-theme", next); } catch (e) { /* storage unavailable: still switches */ }
-    paintButton();
-    announce();
+    const apply = () => {
+      root.setAttribute("data-theme", next);
+      try { localStorage.setItem("agt-theme", next); } catch (e) { /* storage unavailable: still switches */ }
+      paintButton();
+      announce();
+    };
+    // Home page: cross-fade the switch (View Transitions; timing in home.css). Not on the demo,
+    // whose charts redraw after the switch and would be caught mid-way.
+    const fade = document.startViewTransition && document.body.classList.contains("about-page") &&
+      !matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (fade) document.startViewTransition(apply); else apply();
   }
 
   if (button) button.addEventListener("click", toggleTheme);

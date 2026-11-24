@@ -21,7 +21,9 @@
   <meta name="twitter:card" content="summary_large_image">
   <link rel="canonical" href="https://baizakisaev.com/">
   <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#0c0a09">
+  <!-- Browser toolbar colour follows the visitor's light/dark setting. -->
+  <meta name="theme-color" content="#fafaf9" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0c0c0d" media="(prefers-color-scheme: dark)">
   <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230c0a09'/%3E%3Cpath d='M18 5 9 18h6l-2 9 9-13h-6z' fill='%23fff'/%3E%3C/svg%3E">
   <!-- Who this site is about, for search engines. -->
@@ -39,97 +41,201 @@
   </script>
   <!-- Apply the saved light/dark choice before first paint (no flash). -->
   <script>try{var t=localStorage.getItem("agt-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+  <!-- Self-hosted fonts, fetched early so text swaps once. -->
+  <link rel="preload" href="assets/fonts/inter-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/jetbrains-mono-latin-500.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="assets/style.css?v=__BUILD__">
+  <link rel="stylesheet" href="assets/home.css?v=__BUILD__">
 </head>
 <body class="about-page">
-  <header class="wrap top">
-    <a class="brand brand-link" href="./">
-      <span class="avatar avatar-xs" aria-hidden="true">
-        <span>BI</span>
-        <img src="assets/img/profile.jpg?v=__BUILD__" alt="" onerror="this.remove()">
-      </span>
-      <span class="brand-name">Baizak Isaev</span>
-    </a>
-    <nav class="actions" aria-label="Site">
-      <a class="btn" href="#project">Project</a>
-      <a class="btn" href="#contact">Contact</a>
-      <button class="btn btn-icon" id="btn-theme" type="button" aria-label="Switch theme" title="Switch light / dark"></button>
-    </nav>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="container bar">
+      <a class="brand-link" href="./" aria-label="Baizak Isaev, home">
+        <span class="avatar avatar-xs" aria-hidden="true">
+          <span>BI</span>
+          <img src="assets/img/profile.jpg?v=__BUILD__" alt="" onerror="this.remove()">
+        </span>
+        <span class="brand-name">Baizak Isaev</span>
+      </a>
+      <nav aria-label="Site">
+        <a class="nav-link" href="#work">Work</a>
+        <a class="nav-link" href="#about">About</a>
+        <a class="nav-link" href="#contact">Contact</a>
+        <button class="btn btn-icon" id="btn-theme" type="button" aria-label="Switch light / dark" title="Switch light / dark"></button>
+      </nav>
+    </div>
   </header>
 
-  <main class="wrap home">
-    <section class="about-hero">
-      <div class="avatar avatar-xl">
-        <span aria-hidden="true">BI</span>
-        <img src="assets/img/profile.jpg?v=__BUILD__" alt="Baizak Isaev" onerror="this.remove()">
-      </div>
-      <p class="eyebrow">About me</p>
-      <h1>Baizak Isaev</h1>
-      <p class="lede">I'm a student at <b>North American University</b> with a strong interest in
-        <b>renewable energy</b>.</p>
-    </section>
+  <main id="main" class="container">
 
-    <section class="grid grid-2 about-grid">
-      <div class="card">
-        <p class="kicker">Studying</p>
-        <h2>North American University</h2>
-        <p class="note">Alongside my studies, I build software that explores how the power grid works.</p>
-      </div>
-      <div class="card">
-        <p class="kicker">Interested in</p>
-        <h2>Renewable energy</h2>
-        <p class="note">Especially how batteries and smarter software help the grid use more solar and wind power.</p>
-      </div>
-    </section>
-
-    <section id="project" class="projects">
-      <h2 class="section-title">Project</h2>
-      <a class="card project-card" href="ai-grid-trader">
-        <img class="project-shot only-light" src="assets/img/project-chart.png?v=__BUILD__" width="1551" height="839" loading="lazy"
-             alt="AI Grid Trader: a 48-hour trading chart with the AI's buy and sell decisions">
-        <img class="project-shot only-dark" src="assets/img/project-chart-dark.png?v=__BUILD__" width="1551" height="839" loading="lazy"
-             alt="AI Grid Trader: a 48-hour trading chart with the AI's buy and sell decisions">
-        <div class="project-body">
-          <p class="kicker">Interactive demo</p>
-          <h3>AI Grid Trader</h3>
-          <p class="note">An AI agent that trades a grid-scale battery on real wholesale electricity prices from
-            California, Germany and South Australia. It buys when power is cheap and plentiful, sells when it's
-            scarce, and counts battery wear as a real cost so the battery lasts. Runs entirely in the browser.</p>
-          <span class="project-cta">Open the project <span aria-hidden="true">→</span></span>
-        </div>
-      </a>
-    </section>
-
-    <section class="card contact" id="contact">
+    <!-- ================================================================ HERO -->
+    <section class="hero" id="top" aria-labelledby="hero-title">
       <div>
-        <p class="kicker">Get in touch</p>
-        <h2>Let's talk energy</h2>
-        <p class="note">Working on energy storage or renewables? I'm open to projects and collaborations, and
-          glad to answer questions about AI Grid Trader.</p>
-        <a class="contact-email" id="email-text" href="#contact">baizak<span aria-hidden="true"></span>@baizakisaev.com</a>
+        <div class="hero-id" data-enter style="--i:0">
+          <span class="avatar" aria-hidden="true">
+            <span>BI</span>
+            <img src="assets/img/profile.jpg?v=__BUILD__" alt="" width="52" height="52" onerror="this.remove()">
+          </span>
+          <div>
+            <p class="hero-name">Baizak Isaev</p>
+            <p class="hero-role">Student · North American University</p>
+          </div>
+        </div>
+
+        <h1 id="hero-title" data-enter style="--i:1">
+          I build software that helps batteries put more <span class="hl">solar and wind</span> on the grid.
+        </h1>
+
+        <p class="hero-lede" data-enter style="--i:2">
+          My latest project, <a href="ai-grid-trader">AI Grid Trader</a>, is an AI agent that trades a
+          grid-scale battery on real wholesale electricity prices, and counts battery wear as a real cost.
+        </p>
+
+        <div class="hero-ctas" data-enter style="--i:3">
+          <a class="btn-v2 btn-v2--primary" href="ai-grid-trader">
+            Try the live demo
+            <svg class="arrow" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <a class="btn-v2" href="#contact">Get in touch</a>
+        </div>
+
+        <p class="status" data-enter style="--i:4">
+          <span class="status-dot" aria-hidden="true"></span>
+          Open to projects and collaborations
+        </p>
       </div>
-      <div class="contact-links">
-        <a class="btn btn-primary" id="email-link" href="#contact">
-          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm0 1 8 7 8-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
-          Email me
-        </a>
-        <a class="btn" href="https://www.linkedin.com/in/baizakisaev/" target="_blank" rel="noopener">
-          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9.5h4V21H3zM9.5 9.5h3.8v1.6h.06c.53-1 1.84-2.06 3.79-2.06 4.05 0 4.8 2.67 4.8 6.13V21h-4v-5.13c0-1.22-.02-2.8-1.7-2.8-1.71 0-1.97 1.33-1.97 2.71V21h-4z" fill="currentColor"/></svg>
-          LinkedIn
-        </a>
-        <a class="btn" href="https://github.com/nolimitbaiza" target="_blank" rel="noopener">
-          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.08.63-1.33-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.5 9.5 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2z" fill="currentColor"/></svg>
-          GitHub
-        </a>
+
+      <!-- Proof above the fold: the demo's Germany run (ai-grid-trader#p=de, 6-7 Nov 2025), the same
+           scenario as the project screenshots (tools/build_project_shot.py). Update both together. -->
+      <div class="proof" role="group" data-enter style="--i:3" aria-label="AI Grid Trader results">
+        <div class="proof-head">
+          <p class="eyebrow-v2">AI Grid Trader · Germany</p>
+          <a href="ai-grid-trader#p=de&amp;d=309" tabindex="-1" aria-hidden="true">Open
+            <svg viewBox="0 0 16 16" width="14" height="14"><path d="M5 11 11 5M6 5h5v5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </div>
+        <dl class="metrics">
+          <div class="metric">
+            <dt>Net profit in 48 hours</dt>
+            <dd><span class="sr-only">€9,101</span><span class="count" aria-hidden="true" data-count="9101" data-prefix="€">€9,101</span></dd>
+          </div>
+          <div class="metric">
+            <dt>Ahead of a rule-based bot</dt>
+            <dd><span class="sr-only">plus €8,366</span><span class="count pos" aria-hidden="true" data-count="8366" data-prefix="+€">+€8,366</span></dd>
+          </div>
+          <div class="metric">
+            <dt>Of the perfect-hindsight maximum</dt>
+            <dd><span class="sr-only">92%</span><span class="count" aria-hidden="true" data-count="92" data-suffix="%">92%</span></dd>
+          </div>
+        </dl>
+        <p class="proof-foot">48 hours of real day-ahead prices in Germany, 6–7 Nov 2025. Profit is after battery wear.</p>
+      </div>
+    </section>
+
+    <!-- ================================================================ WORK -->
+    <section class="section" id="work" aria-labelledby="work-title">
+      <div class="section-head" data-reveal>
+        <p class="eyebrow-v2"><span class="idx">01</span>Work</p>
+        <h2 class="section-title-v2" id="work-title">Featured project</h2>
+      </div>
+
+      <article class="project" data-reveal data-spotlight>
+        <div class="project-media">
+          <img class="only-light" src="assets/img/project-chart.png?v=__BUILD__" width="1551" height="839" loading="lazy" decoding="async" alt="AI Grid Trader: a 48-hour trading chart with the AI's buy and sell decisions">
+          <img class="only-dark" src="assets/img/project-chart-dark.png?v=__BUILD__" width="1551" height="839" loading="lazy" decoding="async" alt="AI Grid Trader: a 48-hour trading chart with the AI's buy and sell decisions">
+        </div>
+        <div class="project-body-v2">
+          <div>
+            <ul class="tags" aria-label="Project type">
+              <li>Interactive demo</li>
+              <li>Runs in your browser</li>
+            </ul>
+            <h3><a class="project-link" href="ai-grid-trader">AI Grid Trader</a></h3>
+            <p class="project-desc">An AI agent that trades a grid-scale battery on real wholesale electricity prices.
+              It buys when power is cheap and plentiful, sells when it's scarce, and counts battery wear as a
+              real cost so the battery lasts.</p>
+            <span class="project-cta" aria-hidden="true">
+              Open the project
+              <svg class="arrow" viewBox="0 0 16 16" width="16" height="16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+          </div>
+          <dl class="project-meta">
+            <div><dt>Markets</dt><dd>California · Germany · South Australia</dd></div>
+            <div><dt>Data</dt><dd>Real wholesale electricity prices</dd></div>
+            <div><dt>Objective</dt><dd>Maximise profit net of battery wear</dd></div>
+          </dl>
+        </div>
+      </article>
+    </section>
+
+    <!-- ================================================================ ABOUT -->
+    <section class="section" id="about" aria-labelledby="about-title">
+      <div class="about-v2">
+        <div class="section-head" data-reveal>
+          <p class="eyebrow-v2"><span class="idx">02</span>About me</p>
+          <h2 class="section-title-v2" id="about-title">Energy, through software.</h2>
+        </div>
+        <div data-reveal style="--i:1">
+          <p class="lead">I'm a student at North American University with a strong interest in renewable energy.</p>
+          <p>Alongside my studies, I build software that explores how the power grid works, especially how
+            batteries and smarter software help the grid use more solar and wind power.</p>
+          <dl class="facts" data-stagger>
+            <div class="fact"><dt>Studying</dt><dd>North American University</dd></div>
+            <div class="fact"><dt>Focus</dt><dd>Battery storage &amp; electricity markets</dd></div>
+            <div class="fact"><dt>Building</dt><dd>AI Grid Trader</dd></div>
+          </dl>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================ CONTACT -->
+    <section class="section" id="contact" aria-labelledby="contact-title">
+      <div class="contact-v2" data-reveal>
+        <p class="eyebrow-v2"><span class="idx">03</span>Contact</p>
+        <h2 id="contact-title">Let's talk energy.</h2>
+        <p class="contact-lede">Working on energy storage or renewables? I'm open to projects and collaborations,
+          and glad to answer questions about AI Grid Trader.</p>
+
+        <div class="email-row">
+          <a class="email-big" id="email-text" href="#contact">baizak<span aria-hidden="true"></span>@baizakisaev.com</a>
+          <button class="copy-btn" type="button" data-copy-email aria-label="Copy email address">
+            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="5" y="5" width="8" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M11 3.5V3a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h.5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+            <span>Copy</span>
+          </button>
+        </div>
+
+        <div class="contact-actions">
+          <a class="btn-v2 btn-v2--primary" id="email-link" href="#contact">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm0 1 8 7 8-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+            Email me
+          </a>
+          <a class="btn-v2" href="https://www.linkedin.com/in/baizakisaev/" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9.5h4V21H3zM9.5 9.5h3.8v1.6h.06c.53-1 1.84-2.06 3.79-2.06 4.05 0 4.8 2.67 4.8 6.13V21h-4v-5.13c0-1.22-.02-2.8-1.7-2.8-1.71 0-1.97 1.33-1.97 2.71V21h-4z" fill="currentColor"/></svg>
+            LinkedIn<span class="sr-only"> (opens in a new tab)</span>
+          </a>
+          <a class="btn-v2" href="https://github.com/nolimitbaiza" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.08.63-1.33-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.5 9.5 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2z" fill="currentColor"/></svg>
+            GitHub<span class="sr-only"> (opens in a new tab)</span>
+          </a>
+        </div>
       </div>
     </section>
   </main>
 
-  <footer class="wrap">
-    <span>© 2026 Baizak Isaev</span>
-    <span><a href="ai-grid-trader">AI Grid Trader</a> · <a href="https://www.linkedin.com/in/baizakisaev/" target="_blank" rel="noopener">LinkedIn</a> · <a href="https://github.com/nolimitbaiza" target="_blank" rel="noopener">GitHub</a></span>
+  <footer class="site-footer">
+    <div class="container">
+      <span>© 2026 Baizak Isaev</span>
+      <ul>
+        <li><a href="ai-grid-trader">AI Grid Trader</a></li>
+        <li><a href="https://www.linkedin.com/in/baizakisaev/" target="_blank" rel="noopener">LinkedIn</a></li>
+        <li><a href="https://github.com/nolimitbaiza" target="_blank" rel="noopener">GitHub</a></li>
+      </ul>
+    </div>
   </footer>
 
   <script src="assets/site.js?v=__BUILD__"></script>
+  <script src="assets/home.js?v=__BUILD__"></script>
 </body>
 </html>

@@ -103,6 +103,9 @@ assets/site.js              Shared by both pages: light/dark switch, contact ema
 assets/engine.js            The model: markets, trading agent, forecasts, benchmarks, accounting, full year
 assets/app.js               The demo page: controls, charts, full-year worker, kiosk, PDF, sharing
 assets/style.css            Minimal light/dark theme and the printable business case
+assets/home.css             Home page layout, type scale, accent colour and motion
+assets/home.js              Home page scroll reveals, header state, count-up numbers, copy email
+assets/fonts/               Inter and JetBrains Mono (self-hosted Latin subsets, OFL)
 assets/data/markets.js      Index of the real markets (loaded with the page)
 assets/data/prices-*.js     A full year of 15-minute prices per market (loaded on demand)
 assets/data/services.js     Yearly grid-services price averages (the defaults)

@@ -68,9 +68,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 
 MARKER = "getComputedStyle(document.documentElement).getPropertyValue('--deploy-marker').trim()"
-HERO_CENTRED = """(() => {
-    const r = document.querySelector('.about-hero h1').getBoundingClientRect();
-    return Math.abs((r.left + r.right) / 2 - innerWidth / 2) < 2;
+# The home page's layout comes from home.css: its two-column hero only appears if that file is current.
+HOME_LAYOUT = """(() => {
+    const hero = document.querySelector('.hero');
+    return !!hero && getComputedStyle(hero).display === 'grid';
 })()"""
 
 if profile.exists():
@@ -113,11 +114,13 @@ with sync_playwright() as pw:
         page.wait_for_timeout(500)
         marker = page.evaluate(MARKER)
         if path == "":
-            detail = f"hero centred: {page.evaluate(HERO_CENTRED)}"
+            drawn = page.evaluate(HOME_LAYOUT)
+            detail = f"home layout applied: {drawn}"
         else:
-            detail = f"chart drawn: {page.locator('#chart-main .main-svg').count() > 0}"
+            drawn = page.locator('#chart-main .main-svg').count() > 0
+            detail = f"chart drawn: {drawn}"
         print(f"after deploy, /{path}: marker {marker} | {detail}")
-        ok = ok and marker == "2"
+        ok = ok and marker == "2" and drawn
     context.close()
 
 server.shutdown()
