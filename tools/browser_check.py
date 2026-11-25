@@ -243,18 +243,22 @@ def run(pw, label, browser_type, **ctx):
             found = cs.evaluate(audit)
             check(f"Case study: no accessibility violations ({theme} theme)", not found, ", ".join(found))
         cs.evaluate("document.documentElement.removeAttribute('data-theme')")
+    # Same method as the posts below: bring each section into view, then check it was told to show
+    # (is-visible), not how far its fade has got (headless WebKit on CI can stall a transition).
     cs.evaluate("""async () => {
-        for (let y = 0; y <= document.body.scrollHeight + innerHeight; y += innerHeight / 2) {
-            scrollTo({top: y, behavior: 'instant'}); await new Promise((r) => setTimeout(r, 120));
+        for (const el of document.querySelectorAll('[data-reveal]')) {
+            el.scrollIntoView({block: 'center', behavior: 'instant'});
+            await new Promise((r) => setTimeout(r, 150));
         }
         scrollTo({top: 0, behavior: 'instant'}); await new Promise((r) => setTimeout(r, 900));
     }""")
-    try:   # staggered fades can still be finishing
-        cs.wait_for_function("[...document.querySelectorAll('[data-reveal]')].every((e) => getComputedStyle(e).opacity === '1')", timeout=4000)
+    try:
+        cs.wait_for_function("[...document.querySelectorAll('[data-reveal]')].every((e) => e.classList.contains('is-visible'))", timeout=8000)
     except Exception:
         pass
-    hidden = cs.evaluate("[...document.querySelectorAll('[data-reveal]')].filter((e) => getComputedStyle(e).opacity !== '1').length")
-    check("Case study: every section is visible after scrolling", hidden == 0, f"{hidden} still hidden")
+    hidden = cs.evaluate("""[...document.querySelectorAll('[data-reveal]')].filter((e) => !e.classList.contains('is-visible'))
+        .map((e) => e.className)""")
+    check("Case study: every section is visible after scrolling", not hidden, "; ".join(hidden))
     cs.screenshot(path=str(SHOTS / f"{label.replace(' ', '_')}_case_study.png"), full_page=True)
     for slug, tables in (("battery-wear-cost", 2), ("perfect-hindsight-benchmark", 2)):
         cs.goto(URL + slug, wait_until="networkidle")
