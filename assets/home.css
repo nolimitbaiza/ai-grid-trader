@@ -367,6 +367,14 @@ body { font-family: var(--font-sans); font-optical-sizing: auto; }
 .about-v2 { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: var(--space-xl) var(--space-3xl); align-items: start; }
 .about-v2 .lead { margin: 0; font-size: var(--step-1); line-height: 1.6; }
 .about-v2 .lead + p { margin: var(--space-md) 0 0; color: var(--muted); }
+.about-v2 .now {
+  display: flex; align-items: baseline; gap: 12px; margin: var(--space-lg) 0 0; padding: 12px 16px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line)); border-radius: var(--r-md);
+  background: var(--accent-soft); color: var(--ink); line-height: 1.5;
+}
+.now-label {
+  flex: none; font: 600 0.75rem/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent);
+}
 .facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-md); margin: var(--space-xl) 0 0; }
 .fact {
   padding: var(--space-md) var(--space-md) var(--space-lg); border-radius: var(--r-md);
@@ -410,7 +418,25 @@ body { font-family: var(--font-sans); font-optical-sizing: auto; }
 /* ---------- More projects and the phone crops ---------- */
 .project + .project { margin-top: var(--space-xl); }
 .project-media picture, .cs-figure picture { display: contents; }   /* <source> swaps in the phone crop */
-.project-media.project-media--bleed { background: #111214; }        /* Pitwall is dark-only: shot edge to edge */
+.project-media.project-media--bleed { background: #111214; }
+/* Demo loop (home.js adds .has-loop when it can play): replaces the screenshots on wider screens. */
+.project-media { position: relative; }
+/* Until it plays, the video sits unseen (still rendered, so every browser decodes it). */
+.project-media .demo-loop { position: absolute; left: 0; top: 0; width: 2px; height: 2px; opacity: 0; pointer-events: none; }
+.project-media.has-loop .demo-loop {
+  position: static; display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; opacity: 1; background: var(--bg);
+}
+.about-page .project-media.has-loop picture img { display: none !important; }
+.loop-toggle {
+  position: absolute; right: 12px; bottom: 12px; z-index: 2;            /* above the card's stretched link */
+  display: grid; place-items: center; width: 36px; height: 36px; padding: 0;
+  border: 1px solid var(--line); border-radius: 50%;
+  background: color-mix(in srgb, var(--surface-raised) 88%, transparent); color: var(--ink);
+  box-shadow: var(--elev-1); cursor: pointer; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+}
+.loop-toggle:hover { border-color: color-mix(in srgb, var(--ink) 28%, var(--line)); }
+.loop-toggle .i-play, .loop-toggle[aria-pressed="true"] .i-pause { display: none; }
+.loop-toggle[aria-pressed="true"] .i-play { display: block; }        /* Pitwall is dark-only: shot edge to edge */
 .project-media.project-media--bleed img { padding: 0; }
 
 /* ---------- Writing list (home) ---------- */

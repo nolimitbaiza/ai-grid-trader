@@ -46,6 +46,11 @@ def run(pw, label, browser_type, **ctx):
     browser = browser_type.launch()
     context = browser.new_context(service_workers="block", **ctx)
     context.add_init_script("window.print = () => { window.__printed = true; };")
+    if browser_type is pw.webkit:
+        # Playwright's WebKit build says it plays WebM/VP9, but loading the demo loop stalls its page
+        # screenshots. Real Safari only says yes when it can play it. Here WebKit checks the fallback:
+        # the screenshots stay when the video can't play.
+        context.add_init_script("HTMLMediaElement.prototype.canPlayType = () => '';")
     page = context.new_page()
     errors = []
     page.on("pageerror", lambda e: errors.append(str(e)))
@@ -251,6 +256,40 @@ def run(pw, label, browser_type, **ctx):
     about.keyboard.press("Escape")
     check("Home page: Escape closes the email menu and returns focus",
           menu.is_hidden() and about.evaluate("document.activeElement.id") == "email-link")
+    # The hero leads with the full-year results; the card lists its stack; About has the Now line.
+    proof = about.text_content(".proof")              # includes the screen-reader values (the visible ones count up)
+    check("Home page: hero shows the full-year results",
+          "€2.54 million" in proof and "plus €3.09 million" in proof and "93–95%" in proof, " ".join(proof.split())[:160])
+    check("Home page: AI Grid Trader card lists its stack", "JavaScript · Python" in about.inner_text("#work .project >> nth=0"))
+    check("Home page: Now line in About", "summer 2027 internship" in about.inner_text("#about .now"))
+    # The demo loop: plays in view where WebM/VP9 plays, otherwise the screenshots stay.
+    loop = """() => { const v = document.querySelector('.demo-loop'), m = v.closest('.project-media');
+        return {on: m.classList.contains('has-loop'), paused: v.paused, t: v.currentTime, src: v.currentSrc.split('/').pop().split('?')[0],
+                button: !m.querySelector('.loop-toggle').hidden,
+                shots: [...m.querySelectorAll('picture img')].filter((i) => getComputedStyle(i).display !== 'none').length}; }"""
+    about.evaluate("document.querySelector('#work .project-media').scrollIntoView({block: 'center', behavior: 'instant'})")
+    if browser_type is pw.webkit:
+        about.wait_for_timeout(800)
+        st = about.evaluate(loop)
+        check("Home page: card keeps its screenshot where the video can't play", not st["on"] and st["shots"] == 1 and not st["button"], str(st))
+    else:
+        try:
+            about.wait_for_function("document.querySelector('.project-media').classList.contains('has-loop')", timeout=10000)
+        except Exception:
+            pass
+        about.wait_for_timeout(600)
+        st = about.evaluate(loop)
+        check("Home page: demo loop plays in view, replacing the screenshot",
+              st["on"] and not st["paused"] and st["t"] > 0 and st["shots"] == 0 and st["button"]
+              and st["src"] == ("demo-loop-dark.webm" if about.evaluate("Site.theme()") == "dark" else "demo-loop.webm"), str(st))
+        about.click(".loop-toggle")
+        st = about.evaluate(loop)
+        check("Home page: the pause button pauses the demo loop",
+              st["paused"] and about.get_attribute(".loop-toggle", "aria-pressed") == "true", str(st))
+        about.click(".loop-toggle")
+        about.evaluate("scrollTo({top: 0, behavior: 'instant'})")
+        about.wait_for_timeout(500)
+        check("Home page: demo loop pauses when scrolled away", about.evaluate(loop)["paused"])
     about.evaluate("document.activeElement.blur(); scrollTo({top: 0, behavior: 'instant'})")
     about.wait_for_timeout(600)
     check("Home page: degree and graduation year shown", "Computer Science" in words and "May 2027" in words)
@@ -312,24 +351,38 @@ def run(pw, label, browser_type, **ctx):
     check("Home page: every section is visible after scrolling", hidden == 0, f"{hidden} still hidden")
     about.screenshot(path=str(SHOTS / f"{label.replace(' ', '_')}_about.png"), full_page=True)
     # The project screenshot has a light and a dark version: exactly one shows in each theme.
-    pair = """() => Object.fromEntries(['light', 'dark'].map((t) => {
-        const img = document.querySelector('.project-media img.only-' + t);
-        return [t, getComputedStyle(img).display !== 'none'];
-    }))"""
+    # Where the demo loop plays it covers them, so they're checked as the fallback (loop off).
+    pair = """() => {
+        const media = document.querySelector('.project-media'), had = media.classList.contains('has-loop');
+        media.classList.remove('has-loop');
+        const shown = Object.fromEntries(['light', 'dark'].map((t) => {
+            const img = document.querySelector('.project-media img.only-' + t);
+            return [t, getComputedStyle(img).display !== 'none'];
+        }));
+        if (had) media.classList.add('has-loop');
+        return shown;
+    }"""
     about.evaluate("document.documentElement.setAttribute('data-theme', 'light')")
     shown = about.evaluate(pair)
     check("Home page: light theme shows only the light screenshot", shown == {"light": True, "dark": False}, str(shown))
     about.evaluate("document.documentElement.setAttribute('data-theme', 'dark')")
     about.locator(".project").first.scroll_into_view_if_needed()
-    try:
-        about.wait_for_function("(() => { const i = document.querySelector('.project-media img.only-dark'); return i.complete && i.naturalWidth > 0; })()", timeout=10000)
-    except Exception:
-        pass
-    shots = about.evaluate("""() => Object.fromEntries(['light', 'dark'].map((t) => {
-        const img = document.querySelector('.project-media img.only-' + t);
-        return [t, getComputedStyle(img).display !== 'none' && img.naturalWidth > 0];
-    }))""")
-    check("Home page: dark theme shows the dark screenshot", shots == {"light": False, "dark": True}, str(shots))
+    if about.evaluate("document.querySelector('.project-media').classList.contains('has-loop')"):
+        # The loop covers the screenshots (the lazy dark one never loads): it must switch to the dark video.
+        about.evaluate("document.dispatchEvent(new CustomEvent('site:theme', {detail: 'dark'}))")
+        about.wait_for_timeout(400)
+        src = about.evaluate("document.querySelector('.demo-loop').currentSrc")
+        check("Home page: dark theme plays the dark demo loop", "demo-loop-dark.webm" in src, src)
+    else:
+        try:
+            about.wait_for_function("(() => { const i = document.querySelector('.project-media img.only-dark'); return i.complete && i.naturalWidth > 0; })()", timeout=10000)
+        except Exception:
+            pass
+        shots = about.evaluate("""() => Object.fromEntries(['light', 'dark'].map((t) => {
+            const img = document.querySelector('.project-media img.only-' + t);
+            return [t, getComputedStyle(img).display !== 'none' && img.naturalWidth > 0];
+        }))""")
+        check("Home page: dark theme shows the dark screenshot", shots == {"light": False, "dark": True}, str(shots))
     cards = about.evaluate("[...document.querySelectorAll('#work .project-link')].map((a) => a.getAttribute('href'))")
     check("Home page: AI Grid Trader and Pitwall project cards",
           len(cards) == 2 and cards[0] == "ai-grid-trader" and "f1_constructor_performance_tracker" in cards[1], str(cards))
@@ -437,6 +490,9 @@ def run(pw, label, browser_type, **ctx):
                 files = cs.evaluate(f"{shown}.map((i) => i.currentSrc.split('/').pop().split('?')[0])")
                 check("phone width: project cards use the phone crops",
                       len(files) == 2 and all("-phone" in f for f in files), str(files))
+                check("phone width: no demo loop (the phone crop reads better)",
+                      not cs.evaluate("document.querySelector('.project-media').classList.contains('has-loop')")
+                      and cs.evaluate("document.querySelector('.demo-loop').networkState") != 2)
         cs.screenshot(path=str(SHOTS / "Chromium_phone_case_study.png"), full_page=True)
     cs.close()
 

@@ -131,6 +131,53 @@
     });
   }
 
+  // ------------------------------------------------------------------ 5b. Demo loop on the project card
+  // A silent loop of presenter mode replaces the screenshots on wider screens. It loads nothing
+  // until the card is near the screen, plays only while visible, follows the theme, and has a
+  // pause button. The screenshots stay until the video is really playing, so phones (the phone
+  // crop reads better), reduced motion and browsers that can't play WebM/VP9 keep them.
+  const loop = document.querySelector(".demo-loop");
+  if (loop && hasIO) {
+    const media = loop.closest(".project-media");
+    const toggle = media.querySelector(".loop-toggle");
+    const toggleLabel = toggle.querySelector(".sr-only");
+    const wide = matchMedia("(min-width: 641px)");
+    const canPlay = !!loop.canPlayType && loop.canPlayType('video/webm; codecs="vp9"') !== "";
+    let visible = false, userPaused = false, theme = "", playing = false;
+    loop.addEventListener("timeupdate", () => { if (!playing && loop.currentTime > 0) { playing = true; sync(); } });
+
+    const sync = () => {
+      const on = canPlay && wide.matches && !reduceMotion.matches;
+      media.classList.toggle("has-loop", on && playing);
+      toggle.hidden = !(on && playing);
+      if (!on) { loop.pause(); return; }
+      const want = (window.Site && window.Site.theme()) === "dark" ? "dark" : "light";
+      if (want !== theme) {
+        const at = loop.currentTime || 0;
+        theme = want;
+        loop.poster = loop.dataset[want + "Poster"];
+        loop.src = loop.dataset[want];
+        if (at) loop.addEventListener("loadedmetadata", () => { loop.currentTime = at; }, { once: true });
+      }
+      if (visible && !userPaused) loop.play().catch(() => {});
+      else loop.pause();
+    };
+    toggle.addEventListener("click", () => {
+      userPaused = !userPaused;
+      toggle.setAttribute("aria-pressed", String(userPaused));
+      toggleLabel.textContent = userPaused ? "Play the demo video" : "Pause the demo video";
+      sync();
+    });
+    new IntersectionObserver((entries) => {
+      visible = entries[entries.length - 1].isIntersecting;
+      sync();
+    }, { threshold: 0.25 }).observe(media);
+    wide.addEventListener("change", sync);
+    reduceMotion.addEventListener("change", sync);
+    document.addEventListener("site:theme", sync);
+    sync();
+  }
+
   // ------------------------------------------------------------------ 6. Copy email + toast
   let toast = document.querySelector(".toast");
   if (!toast) {

@@ -71,6 +71,8 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET" || new URL(req.url).origin !== self.location.origin) return;
+  // Videos stream with range requests straight from the network (Safari needs the ranges).
+  if (/\.webm$/.test(new URL(req.url).pathname)) return;
   // Pages are cached by page, ignoring ?kiosk=1 / #… and the .html / index.html spelling:
   // "/", "/index.html" -> "/"; "/ai-grid-trader", "/ai-grid-trader.html" -> "/ai-grid-trader".
   // Other files are cached by their exact address, including the ?v= build stamp.

@@ -13,11 +13,11 @@
   <meta property="og:site_name" content="Baizak Isaev">
   <meta property="og:url" content="https://baizakisaev.com/">
   <meta property="og:title" content="Baizak Isaev">
-  <meta property="og:description" content="Computer Science student at North American University, focused on renewable energy. Creator of AI Grid Trader.">
-  <meta property="og:image" content="https://baizakisaev.com/assets/og.png">
+  <meta property="og:description" content="Computer Science student at North American University (May 2027) building software for battery storage and electricity markets. Looking for a summer 2027 internship in energy software.">
+  <meta property="og:image" content="https://baizakisaev.com/assets/og-card.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="AI Grid Trader: a battery trading chart with buy and sell decisions">
+  <meta property="og:image:alt" content="Baizak Isaev, Computer Science, North American University, class of 2027: I build software that helps batteries put more solar and wind on the grid.">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="canonical" href="https://baizakisaev.com/">
   <link rel="manifest" href="manifest.webmanifest">
@@ -114,30 +114,30 @@
         </p>
       </div>
 
-      <!-- Proof above the fold: the demo's Germany run (ai-grid-trader#p=de, 6-7 Nov 2025), the same
-           scenario as the project screenshots (tools/build_project_shot.py). Update both together. -->
+      <!-- Proof above the fold: the full-year 2025 results, the same figures as the case study's
+           Results table and the posts (node tools/writing_numbers.js). Update them together. -->
       <div class="proof" role="group" data-enter style="--i:3" aria-label="AI Grid Trader results">
         <div class="proof-head">
-          <p class="eyebrow-v2">AI Grid Trader · Germany</p>
-          <a href="ai-grid-trader#p=de&amp;d=309" tabindex="-1" aria-hidden="true">Open
+          <p class="eyebrow-v2">AI Grid Trader · Full year 2025</p>
+          <a href="ai-grid-trader-case-study#results" tabindex="-1" aria-hidden="true">Results
             <svg viewBox="0 0 16 16" width="14" height="14"><path d="M5 11 11 5M6 5h5v5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </a>
         </div>
         <dl class="metrics">
           <div class="metric">
-            <dt>Net profit in 48 hours</dt>
-            <dd><span class="sr-only">€9,101</span><span class="count" aria-hidden="true" data-count="9101" data-prefix="€">€9,101</span></dd>
+            <dt>Net profit in a year, Germany</dt>
+            <dd><span class="sr-only">€2.54 million</span><span class="count" aria-hidden="true" data-count="2.54" data-decimals="2" data-prefix="€" data-suffix="M">€2.54M</span></dd>
           </div>
           <div class="metric">
             <dt>Ahead of a rule-based bot</dt>
-            <dd><span class="sr-only">plus €8,366</span><span class="count pos" aria-hidden="true" data-count="8366" data-prefix="+€">+€8,366</span></dd>
+            <dd><span class="sr-only">plus €3.09 million</span><span class="count pos" aria-hidden="true" data-count="3.09" data-decimals="2" data-prefix="+€" data-suffix="M">+€3.09M</span></dd>
           </div>
           <div class="metric">
-            <dt>Of the perfect-hindsight maximum</dt>
-            <dd><span class="sr-only">92%</span><span class="count" aria-hidden="true" data-count="92" data-suffix="%">92%</span></dd>
+            <dt>Of the perfect-hindsight maximum, in all 3 markets</dt>
+            <dd>93–95%</dd>
           </div>
         </dl>
-        <p class="proof-foot">48 hours of real day-ahead prices in Germany, 6–7 Nov 2025. Profit is after battery wear.</p>
+        <p class="proof-foot">A 100 MWh battery trading every hour of 2025 on real wholesale prices in California, Germany and South Australia, planning on a forecast. Profit is after battery wear.</p>
       </div>
     </section>
 
@@ -158,6 +158,17 @@
             <source media="(max-width: 640px)" srcset="assets/img/project-chart-phone-dark.png?v=__BUILD__" width="1028" height="734">
             <img class="only-dark" src="assets/img/project-chart-dark.png?v=__BUILD__" width="1551" height="839" loading="lazy" decoding="async" alt="AI Grid Trader: a 48-hour trading chart with the AI's buy and sell decisions">
           </picture>
+          <!-- Silent demo loop (tools/build_demo_loop.py). home.js swaps it in for the screenshots on
+               wider screens when WebM plays and motion is welcome; phones keep the phone crop. -->
+          <video class="demo-loop" muted loop playsinline preload="none" width="1920" height="1080"
+            data-light="assets/video/demo-loop.webm?v=__BUILD__" data-light-poster="assets/img/demo-loop.jpg?v=__BUILD__"
+            data-dark="assets/video/demo-loop-dark.webm?v=__BUILD__" data-dark-poster="assets/img/demo-loop-dark.jpg?v=__BUILD__"
+            aria-label="AI Grid Trader walking through 48 hours in Germany: why it buys, why it sells, the profit, then a full year"></video>
+          <button class="loop-toggle" type="button" aria-pressed="false" hidden>
+            <svg class="i-pause" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M5 3.5v9M11 3.5v9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <svg class="i-play" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M5 3.2v9.6L12.5 8z" fill="currentColor"/></svg>
+            <span class="sr-only">Pause the demo video</span>
+          </button>
         </div>
         <div class="project-body-v2">
           <div>
@@ -179,8 +190,8 @@
           </div>
           <dl class="project-meta">
             <div><dt>Markets</dt><dd>California · Germany · South Australia</dd></div>
-            <div><dt>Data</dt><dd>Real wholesale electricity prices</dd></div>
             <div><dt>Objective</dt><dd>Maximise profit net of battery wear</dd></div>
+            <div><dt>Stack</dt><dd>JavaScript · Python · Plotly · Playwright · Docker</dd></div>
           </dl>
         </div>
       </article>
@@ -255,6 +266,8 @@
           <p class="lead">I'm a Computer Science student at North American University in Houston, graduating in May 2027, with a strong interest in renewable energy.</p>
           <p>Alongside my studies, I build software that explores how the power grid works, especially how
             batteries and smarter software help the grid use more solar and wind power.</p>
+          <p class="now"><span class="now-label">Now</span>Finishing my CS degree (May 2027) and looking for a
+            summer 2027 internship in energy software.</p>
           <dl class="facts" data-stagger>
             <div class="fact"><dt>Studying</dt><dd>BS Computer Science<span>North American University</span></dd></div>
             <div class="fact"><dt>Graduating</dt><dd>May 2027<span>GPA 3.75 / 4.0</span></dd></div>

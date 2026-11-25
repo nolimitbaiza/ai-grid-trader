@@ -123,7 +123,9 @@ tools/fetch_data.py         Downloads a year of public market data
 tools/build_markets.py      Rebuilds the real-price data files
 tools/build_services.py     Rebuilds the grid-services price averages
 tools/build_assets.py       Rebuilds the app icons and QR code
-tools/build_og.py           Rebuilds the link-preview image
+tools/build_og.py           Rebuilds the demo's link-preview image (assets/og.png)
+tools/build_og_card.py      Rebuilds the home page and posts' preview card (assets/og-card.png)
+tools/build_demo_loop.py    Records the demo loop on the home page's project card (assets/video/)
 tools/build_project_shot.py Rebuilds the AI Grid Trader screenshots (light and dark, wide and phone)
 tools/build_f1_shot.py     Rebuilds the Pitwall screenshots from its live demo
 tools/writing_numbers.js   Reproduces the numbers quoted in the posts
