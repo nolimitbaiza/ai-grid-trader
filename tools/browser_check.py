@@ -117,6 +117,10 @@ def run(pw, label, browser_type, **ctx):
     check("project page has no 'Built by' card", page.locator("#contact").count() == 0)
     names = [page.get_attribute(f"#btn-{b}", "aria-label") for b in ("play", "report", "share", "present", "theme")]
     check("header buttons have accessible names", all(names), str(names))
+    check("demo: header and intro both link to the case study",
+          page.get_attribute(".demo-header .nav-case", "href") == "ai-grid-trader-case-study" and page.is_visible(".demo-header .nav-case")
+          and page.get_attribute(".intro .case-card", "href") == "ai-grid-trader-case-study" and page.is_visible(".intro .case-card"))
+    check("demo: the 'Agent sees' switch shows its sliding pill", page.evaluate("document.querySelector('.seg').classList.contains('has-ind')"))
 
     about = context.new_page()
     about.on("pageerror", lambda e: errors.append(str(e)))
@@ -129,6 +133,8 @@ def run(pw, label, browser_type, **ctx):
     check("Home page: photo loads", about.evaluate("(() => { const i = document.querySelector('.hero-id .avatar img'); return !!i && i.naturalWidth > 0; })()"))
     check("Home page: hero shows the project's numbers", about.locator(".proof .metric").count() == 3)
     check("Home page: copy-email button present", about.locator("[data-copy-email]").count() == 1)
+    ctas = about.evaluate("[...document.querySelectorAll('.hero-ctas a')].map((a) => a.getAttribute('href'))")
+    check("Home page: hero buttons open the demo and the case study", ctas == ["ai-grid-trader", "ai-grid-trader-case-study"], str(ctas))
     check("Home page: degree and graduation year shown", "Computer Science" in words and "May 2027" in words)
     resume = about.evaluate("""async () => {
         const links = [...document.querySelectorAll('a[href*="Baizak-Isaev-Resume.pdf"]')];
@@ -316,6 +322,18 @@ def run(pw, label, browser_type, **ctx):
     page.wait_for_timeout(300)
     check("tap/click exits auto-play", not page.evaluate("document.body.classList.contains('kiosk')"))
 
+    # Cards below the chart fade in as they scroll into view: bring each one in, then check.
+    page.evaluate("""async () => {
+        for (const el of document.querySelectorAll('[data-reveal]')) {
+            el.scrollIntoView({block: 'center', behavior: 'instant'});
+            await new Promise((r) => setTimeout(r, 150));
+        }
+        scrollTo({top: 0, behavior: 'instant'});
+    }""")
+    unrevealed = page.evaluate("""[...document.querySelectorAll('[data-reveal]')]
+        .filter((e) => e.offsetParent && !e.classList.contains('is-visible')).map((e) => e.className)""")
+    check("demo: every card revealed after scrolling", not unrevealed, "; ".join(unrevealed))
+    page.wait_for_timeout(900)
     page.screenshot(path=str(SHOTS / f"{label.replace(' ', '_')}.png"), full_page=True)
     if label.startswith("Chromium"):
         # Phone width: header buttons collapse to icons, but "New day" keeps its label.
@@ -323,6 +341,9 @@ def run(pw, label, browser_type, **ctx):
         page.wait_for_timeout(300)
         check("phone width: header labels hidden, 'New day' label kept",
               not page.is_visible("#btn-share .lbl") and page.is_visible("#btn-shuffle .lbl"))
+        wide = page.evaluate("document.documentElement.scrollWidth - innerWidth")
+        check("phone width: demo has no sideways scroll and keeps the case-study link",
+              wide <= 0 and page.is_visible(".demo-header .nav-case"), f"{wide}px too wide")
         page.screenshot(path=str(SHOTS / "Chromium_phone.png"))
     check("no JavaScript errors", not errors, "; ".join(errors[:3]))
     browser.close()

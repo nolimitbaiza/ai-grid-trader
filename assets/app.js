@@ -843,6 +843,35 @@
   let state = readState();
   let last = null;
   let clickBound = false;
+  let fresh = true;                       // a new scenario (first load, market, mode, day): animate it in
+
+  // Motion for a new scenario: the headline numbers rise into place and the chart draws in from
+  // the left (style.css, "Motion"). Not for slider drags, which re-render every frame.
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+  function playScenarioMotion() {
+    if (reduceMotion.matches) return;
+    $("kpis").querySelectorAll(".value").forEach((v, i) => { v.style.setProperty("--i", i); v.classList.add("bump"); });
+    const chart = $("chart-main");
+    chart.classList.remove("draw-in");
+    void chart.offsetWidth;               // restart the animation
+    chart.classList.add("draw-in");
+    clearTimeout(playScenarioMotion.timer);
+    playScenarioMotion.timer = setTimeout(() => chart.classList.remove("draw-in"), 1300);
+  }
+
+  // "Agent sees" switch: a pill slides under the selected option. Measured from the buttons, so it
+  // follows the font, the language of the labels and the window size.
+  function placeSeg() {
+    const seg = document.querySelector(".seg");
+    const on = seg && seg.querySelector('button[aria-pressed="true"]');
+    if (!on || !on.offsetWidth) return;  // hidden (auto-play): placed again when it shows
+    seg.style.setProperty("--seg-x", on.offsetLeft + "px");
+    seg.style.setProperty("--seg-w", on.offsetWidth + "px");
+    if (!seg.classList.contains("has-ind")) {
+      seg.classList.add("has-ind");
+      requestAnimationFrame(() => requestAnimationFrame(() => seg.classList.add("ind-ready")));
+    }
+  }
 
   function render(upto = N) {
     if (!isLoaded(state.p)) {                       // fetch this market's prices first
@@ -865,6 +894,7 @@
     const c = palette();
     renderKpis(r, upto);
     renderMainChart(r, c, upto, "chart-main");
+    if (fresh && upto === N && !kiosk.on) { fresh = false; playScenarioMotion(); }
     describeMainChart(r);
     renderInsight(r);
     $("source").textContent = sourceText(r);
@@ -949,10 +979,12 @@
     }
     document.querySelectorAll(".chip[data-key]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.key === state.p)));
     document.querySelectorAll(".seg button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === state.mode)));
+    placeSeg();
     updateOutputs();
   }
 
   function selectMarket(key) {
+    fresh = true;
     state.p = key;
     state.d = SIM[key] ? 0 : defaultDay(key);
     if (SIM[key]) { state.seed = SIM[key].seed; state.vol = SIM[key].volatility; }
@@ -962,12 +994,14 @@
   }
 
   function setMode(mode) {
+    fresh = true;
     state.mode = mode;
     syncControls();
     scheduleRender();
   }
 
   function newDay() {
+    fresh = true;
     if (SIM[state.p]) {
       state.seed = Math.floor(Math.random() * 100000);
       toast("New simulated market");
@@ -1084,6 +1118,7 @@
     kiosk.t = N;
     document.body.classList.remove("kiosk");
     render();
+    placeSeg();
     Plotly.Plots.resize("chart-main");
   }
 
@@ -1277,7 +1312,9 @@
     $("explain-first").addEventListener("click", () => { const s = last && tradeStarts(last); if (s && s.length) showExplain(s[0], true); });
     $("btn-play").addEventListener("click", () => (kiosk.on ? stopKiosk() : startKiosk()));
     $("btn-report").addEventListener("click", openReportDialog);
-    $("day-select").addEventListener("change", (e) => { state.d = parseInt(e.target.value, 10) || 0; scheduleRender(); });
+    $("day-select").addEventListener("change", (e) => { fresh = true; state.d = parseInt(e.target.value, 10) || 0; scheduleRender(); });
+    addEventListener("resize", placeSeg, { passive: true });
+    if (document.fonts) document.fonts.ready.then(placeSeg);   // Inter swaps in after first paint
 
     $("report-dialog").addEventListener("close", () => {
       const dlg = $("report-dialog");

@@ -31,7 +31,8 @@ with sync_playwright() as pw:
     browser = pw.chromium.launch()
     for scheme, width, scale, name in SHOTS:
         page = browser.new_page(viewport={"width": width, "height": 1400}, device_scale_factor=scale,
-                                color_scheme=scheme, service_workers="block")
+                                color_scheme=scheme, service_workers="block",
+                                reduced_motion="reduce")   # the still frame, not an entrance mid-way
         page.goto(URL + "ai-grid-trader#p=de", wait_until="networkidle")
         # The return-on-investment figure comes from the full-year simulation: wait for it.
         page.wait_for_function("!document.getElementById('stack').classList.contains('pending')", timeout=180000)

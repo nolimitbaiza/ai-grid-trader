@@ -20,7 +20,8 @@
   <meta name="twitter:card" content="summary_large_image">
   <!-- Installable app (works offline after the first visit) -->
   <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#0c0a09">
+  <meta name="theme-color" content="#fafaf9" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0c0c0d" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Grid Trader">
@@ -28,52 +29,68 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230c0a09'/%3E%3Cpath d='M18 5 9 18h6l-2 9 9-13h-6z' fill='%23fff'/%3E%3C/svg%3E">
   <!-- Apply the saved light/dark choice before first paint (no flash). -->
   <script>try{var t=localStorage.getItem("agt-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+  <link rel="preload" href="assets/fonts/inter-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/jetbrains-mono-latin-500.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="assets/style.css?v=__BUILD__">
+  <link rel="stylesheet" href="assets/home.css?v=__BUILD__">
 </head>
-<body>
-  <header class="wrap top">
-    <div class="brand">
-      <span class="mark" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="15" height="15"><path d="M13.5 2 5 14h5.5L9 22l8.5-12H12z" fill="currentColor"/></svg>
-      </span>
-      <span class="brand-name">AI Grid Trader</span>
-    </div>
-    <div class="actions">
-      <button class="btn" id="btn-play" type="button" aria-label="Auto-play" title="Auto-play for an unattended screen (K)">
-        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" fill="currentColor"/></svg>
-        <span class="lbl">Auto-play</span>
-      </button>
-      <button class="btn" id="btn-report" type="button" aria-label="Business case" title="Download a one-page business case as PDF">
-        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span class="lbl">Business case</span>
-      </button>
-      <button class="btn" id="btn-share" type="button" aria-label="Share" title="Copy a link to this exact scenario">
-        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        <span class="lbl">Share</span>
-      </button>
-      <button class="btn" id="btn-present" type="button" aria-label="Present full screen" title="Full screen (F)">
-        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        <span class="lbl">Present</span>
-      </button>
-      <button class="btn btn-icon" id="btn-theme" type="button" aria-label="Switch theme" title="Switch light / dark (T)"></button>
-      <a class="btn btn-ghost nav-about" href="./">About me</a>
-      <a class="avatar avatar-sm" href="./" title="About Baizak Isaev">
-        <span aria-hidden="true">BI</span>
-        <img src="assets/img/profile.jpg?v=__BUILD__" alt="Baizak Isaev" onerror="this.remove()">
-      </a>
+<body class="demo-page">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header demo-header">
+    <div class="wrap bar">
+      <div class="crumbs">
+        <a class="brand-link" href="./" aria-label="Baizak Isaev, home" title="Baizak Isaev">
+          <span class="avatar avatar-xs" aria-hidden="true">
+            <span>BI</span>
+            <img src="assets/img/profile.jpg?v=__BUILD__" alt="" onerror="this.remove()">
+          </span>
+          <span class="brand-name">Baizak Isaev</span>
+        </a>
+        <span class="crumb-sep" aria-hidden="true">/</span>
+        <span class="crumb-here">AI Grid Trader</span>
+      </div>
+      <div class="actions">
+        <a class="nav-cta nav-case" href="ai-grid-trader-case-study">Case study</a>
+        <button class="btn" id="btn-play" type="button" aria-label="Auto-play" title="Auto-play for an unattended screen (K)">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" fill="currentColor"/></svg>
+          <span class="lbl">Auto-play</span>
+        </button>
+        <button class="btn" id="btn-report" type="button" aria-label="Business case" title="Download a one-page business case as PDF">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="lbl">Business case</span>
+        </button>
+        <button class="btn" id="btn-share" type="button" aria-label="Share" title="Copy a link to this exact scenario">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <span class="lbl">Share</span>
+        </button>
+        <button class="btn" id="btn-present" type="button" aria-label="Present full screen" title="Full screen (F)">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <span class="lbl">Present</span>
+        </button>
+        <button class="btn btn-icon" id="btn-theme" type="button" aria-label="Switch theme" title="Switch light / dark (T)"></button>
+      </div>
     </div>
   </header>
 
-  <main class="wrap">
+  <main class="wrap" id="main">
     <noscript><p class="noscript">This demo runs in your browser and needs JavaScript. Please enable it and reload the page.</p></noscript>
     <section class="intro">
-      <p class="eyebrow"><span class="live" aria-hidden="true"></span>Live demo · Battery energy trading</p>
-      <h1>An AI that trades a grid battery, and protects it.</h1>
-      <p class="lede">The agent plans 48 hours of buying and selling on the wholesale market from a price forecast.
-        It counts battery wear as a real cost, so it only trades when the profit is worth it.</p>
+      <div class="intro-text">
+        <p class="eyebrow-v2" data-enter style="--i:0"><span class="status-dot" aria-hidden="true"></span>Live demo · Battery energy trading</p>
+        <h1 data-enter style="--i:1">An AI that trades a grid battery, and <span class="hl">protects it</span>.</h1>
+        <p class="lede" data-enter style="--i:2">The agent plans 48 hours of buying and selling on the wholesale market from a price forecast.
+          It counts battery wear as a real cost, so it only trades when the profit is worth it.</p>
+      </div>
+      <a class="case-card" href="ai-grid-trader-case-study" data-enter style="--i:3">
+        <span class="case-card-kicker">Case study · 6 min read</span>
+        <span class="case-card-title">How the agent decides, and how it scores on a full year of real prices</span>
+        <span class="case-card-cta">Read the case study
+          <svg class="arrow" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+      </a>
     </section>
 
-    <div class="markets">
+    <div class="markets" data-enter style="--i:3">
       <div class="chips" role="group" aria-label="Simulated markets">
         <span class="chips-label">Simulated</span>
         <div id="sim-chips" class="chip-row"></div>
@@ -96,7 +113,7 @@
       </div>
     </div>
 
-    <section class="card main-card">
+    <section class="card main-card" data-enter style="--i:4">
       <div class="kiosk-banner" aria-live="off">
         <div class="kb-status" id="kb-status"></div>
         <div class="kb-connect">
@@ -130,7 +147,7 @@
       <p class="source" id="source"></p>
     </section>
 
-    <section class="card controls">
+    <section class="card controls" data-reveal>
       <div class="grid" id="main-controls"></div>
       <details>
         <summary>More settings</summary>
@@ -138,7 +155,7 @@
       </details>
     </section>
 
-    <section class="split">
+    <section class="split" data-stagger>
       <div class="card">
         <h2>How it compares</h2>
         <p class="note">Same prices, same battery, same accounting. The bot buys when the price dips below its
@@ -156,7 +173,7 @@
       </div>
     </section>
 
-    <section class="card annual" id="annual" hidden>
+    <section class="card annual" id="annual" data-reveal hidden>
       <div class="annual-head">
         <div>
           <h2 id="annual-title">A full year on real prices</h2>
@@ -177,7 +194,7 @@
       </div>
     </section>
 
-    <section class="card stack" id="stack">
+    <section class="card stack" id="stack" data-reveal>
       <div class="annual-head">
         <div>
           <h2>Revenue streams</h2>
@@ -192,7 +209,7 @@
       <p class="source" id="stack-source"></p>
     </section>
 
-    <section class="card lifetime" id="lifetime">
+    <section class="card lifetime" id="lifetime" data-reveal>
       <div class="annual-head">
         <div>
           <h2>Battery lifetime</h2>
@@ -224,7 +241,7 @@
       <p class="source" id="life-assumptions"></p>
     </section>
 
-    <section class="how">
+    <section class="how" data-stagger>
       <div>
         <span class="num">01</span>
         <h3>Buy low, sell high</h3>
@@ -242,7 +259,7 @@
       </div>
     </section>
 
-    <details class="method">
+    <details class="method" data-reveal>
       <summary>How the agent decides</summary>
       <p>Every 15 minutes the agent picks how much to charge, discharge or hold. Its reward is:</p>
       <p class="formula">reward = arbitrage cash − battery wear − micro-cycling penalty</p>
@@ -262,7 +279,7 @@
 
   <footer class="wrap">
     <span>© 2026 Baizak Isaev · <a href="https://github.com/nolimitbaiza/ai-grid-trader/blob/main/LICENSE.md">Non-commercial license</a> · Results are illustrative.</span>
-    <span><span id="solve-time"></span> · <a href="https://github.com/nolimitbaiza/ai-grid-trader">Source on GitHub</a></span>
+    <span><span id="solve-time"></span> · <a href="ai-grid-trader-case-study">Case study</a> · <a href="https://github.com/nolimitbaiza/ai-grid-trader">Source on GitHub</a></span>
   </footer>
 
   <dialog id="report-dialog" class="dialog">
@@ -290,5 +307,6 @@
   <script src="assets/engine.js?v=__BUILD__"></script>
   <script src="assets/site.js?v=__BUILD__"></script>
   <script src="assets/app.js?v=__BUILD__"></script>
+  <script src="assets/home.js?v=__BUILD__"></script>
 </body>
 </html>

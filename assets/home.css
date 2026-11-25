@@ -1,7 +1,8 @@
 /* ==========================================================================
-   baizakisaev.com — Home v2
-   Loaded by index.html only, after style.css. Everything page-specific is scoped to
-   body.about-page; the fonts and tokens are written so the demo can adopt them later.
+   baizakisaev.com — shared design system
+   Loaded by every page, after style.css: the portfolio pages (body.about-page) and the demo
+   (body.demo-page, whose own layout is in style.css). Fonts, tokens, header, buttons and
+   motion are shared; everything under body.about-page is the portfolio pages only.
    ========================================================================== */
 
 /* FONTS:START ------------------------------------------------------------- */
@@ -162,6 +163,7 @@ body { font-family: var(--font-sans); font-optical-sizing: auto; }
   --btn-bg: var(--ink); --btn-fg: var(--bg); --btn-border: var(--ink);
   font-weight: 600;
 }
+
 @media (hover: hover) {
   .btn-v2:hover { transform: translateY(-1px); box-shadow: var(--elev-2), var(--highlight); --btn-border: color-mix(in srgb, var(--ink) 28%, var(--line)); }
   .btn-v2--primary:hover { --btn-border: var(--ink); }
@@ -207,8 +209,8 @@ body { font-family: var(--font-sans); font-optical-sizing: auto; }
   background: currentColor; transform: scaleX(0); transform-origin: left;
   transition: transform var(--dur) var(--ease-out);
 }
-.nav-link:hover, .nav-link[aria-current="true"] { color: var(--ink); }
-.nav-link:hover::after, .nav-link[aria-current="true"]::after { transform: scaleX(1); }
+.nav-link:hover, .nav-link[aria-current] { color: var(--ink); }
+.nav-link:hover::after, .nav-link[aria-current]::after { transform: scaleX(1); }
 /* Résumé: the one header action that leaves the page, so it gets a quiet pill instead of a text link. */
 .nav-cta {
   display: inline-flex; align-items: center; min-height: 36px; margin-left: 6px; padding: 0 14px;
@@ -254,6 +256,8 @@ body { font-family: var(--font-sans); font-optical-sizing: auto; }
   display: inline-flex; align-items: center; gap: 8px; margin: var(--space-lg) 0 0;
   color: var(--muted); font-size: var(--step--1);
 }
+.status a { color: var(--ink); font-weight: 600; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 4px; text-decoration-thickness: 1.5px; transition: text-decoration-color var(--dur-fast) linear; }
+.status a:hover { text-decoration-color: var(--accent); }
 .status-dot { position: relative; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
 .status-dot::after {                                  /* ping ring: transform + opacity only */
   content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--accent);
@@ -527,8 +531,8 @@ body { font-family: var(--font-sans); font-optical-sizing: auto; }
     animation: enter var(--dur-slow) var(--ease-out) both;
     animation-delay: calc(var(--i, 0) * 80ms + 60ms);
   }
-  .cs-hero [data-enter] { animation: enter var(--dur-slow) var(--ease-out) both; animation-delay: calc(var(--i, 0) * 80ms + 60ms); }
-  .cs-hero h1 .hl { animation: underline 900ms var(--ease-out) 600ms both; }
+  .cs-hero [data-enter], .demo-page [data-enter] { animation: enter var(--dur-slow) var(--ease-out) both; animation-delay: calc(var(--i, 0) * 80ms + 60ms); }
+  .cs-hero h1 .hl, .demo-page .intro h1 .hl { animation: underline 900ms var(--ease-out) 600ms both; }
   .hero .proof[data-enter] { animation-name: enter-card; animation-duration: 900ms; }
   .hero h1 .hl { animation: underline 900ms var(--ease-out) 600ms both; }
 
@@ -547,7 +551,7 @@ body { font-family: var(--font-sans); font-optical-sizing: auto; }
 
 /* Printing (or "Save as PDF") never scrolls, so show every section and skip the motion. */
 @media print {
-  .reveal-on [data-reveal], .hero [data-enter], .cs-hero [data-enter] { opacity: 1 !important; transform: none !important; animation: none !important; transition: none !important; }
+  .reveal-on [data-reveal], .hero [data-enter], .cs-hero [data-enter], .demo-page [data-enter] { opacity: 1 !important; transform: none !important; animation: none !important; transition: none !important; }
   .site-header { position: static; }
 }
 
@@ -580,6 +584,7 @@ body { font-family: var(--font-sans); font-optical-sizing: auto; }
 }
 @media (max-width: 640px) {
   .site-header .brand-name { display: none; }
+  .site-header .nav-link.nav-case { display: none; }
   .nav-link { padding: 0 8px; }
   .nav-link::after { left: 8px; right: 8px; }
   .nav-cta { margin-left: 2px; padding: 0 12px; }
