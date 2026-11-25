@@ -451,6 +451,8 @@ body { font-family: var(--font-sans); font-optical-sizing: auto; }
   position: static; display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; opacity: 1; background: var(--bg);
 }
 .about-page .project-media.has-loop picture img { display: none !important; }
+/* The wide still is the loop's first frame, edge to edge like the video. */
+@media (min-width: 641px) { .project-media:has(.demo-loop) img { padding: 0; } }
 .loop-toggle {
   position: absolute; right: 12px; bottom: 12px; z-index: 2;            /* above the card's stretched link */
   display: grid; place-items: center; width: 36px; height: 36px; padding: 0;
@@ -500,7 +502,7 @@ body { font-family: var(--font-sans); font-optical-sizing: auto; }
 .cs-neg { color: var(--muted); }
 
 .cs-section { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: var(--space-xl) var(--space-3xl); align-items: start; }
-.cs-side { position: sticky; top: 100px; }
+.cs-side { position: sticky; top: 140px; }                     /* below the header and the section bar (68 + 45 px) */
 .cs-body { max-width: 68ch; }
 .cs-body .lead { margin: 0; font-size: var(--step-1); line-height: 1.6; }
 .cs-body p, .cs-body ul, .cs-body ol, .cs-body dl { margin: var(--space-md) 0 0; }

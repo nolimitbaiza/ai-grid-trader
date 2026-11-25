@@ -299,9 +299,12 @@ def run(pw, label, browser_type, **ctx):
         check("Home page: the pause button pauses the demo loop",
               st["paused"] and about.get_attribute(".loop-toggle", "aria-pressed") == "true", str(st))
         about.click(".loop-toggle")
-        about.evaluate("scrollTo({top: 0, behavior: 'instant'})")
+        # It starts a little before the card arrives, so "away" is the bottom of the page.
+        about.evaluate("scrollTo({top: document.body.scrollHeight, behavior: 'instant'})")
         about.wait_for_timeout(500)
         check("Home page: demo loop pauses when scrolled away", about.evaluate(loop)["paused"])
+        check("Home page: the wide still is the loop's first frame (no visible swap)",
+              about.evaluate("[...document.querySelectorAll('.project-media:has(.demo-loop) picture img')].every((i) => /demo-loop(-dark)?\.jpg/.test(i.src))"))
     about.evaluate("document.activeElement.blur(); scrollTo({top: 0, behavior: 'instant'})")
     about.wait_for_timeout(600)
     check("Home page: degree and graduation year shown", "Computer Science" in words and "May 2027" in words)
@@ -350,16 +353,19 @@ def run(pw, label, browser_type, **ctx):
         check("Home page: no accessibility violations", not found, ", ".join(found))
     # Sections fade in as they scroll into view: scroll through like a reader, then check that
     # every one of them ended up visible before taking the full-page screenshot.
+    # Each section is brought into view in turn: a fast sweep can skip past one before headless
+    # WebKit on CI has reported it on screen.
     about.evaluate("""async () => {
-        for (let y = 0; y <= document.body.scrollHeight + innerHeight; y += innerHeight / 2) {
-            scrollTo({top: y, behavior: 'instant'}); await new Promise((r) => setTimeout(r, 120));
+        for (const el of document.querySelectorAll('[data-reveal]')) {
+            el.scrollIntoView({block: 'center', behavior: 'instant'});
+            await new Promise((r) => setTimeout(r, 150));
         }
         scrollTo({top: 0, behavior: 'instant'}); await new Promise((r) => setTimeout(r, 900));
     }""")
     # Checks that each one was revealed (is-visible), not how far its fade has got: headless WebKit
     # on CI can stall a transition part way.
     try:
-        about.wait_for_function("[...document.querySelectorAll('[data-reveal]')].every((e) => e.classList.contains('is-visible'))", timeout=4000)
+        about.wait_for_function("[...document.querySelectorAll('[data-reveal]')].every((e) => e.classList.contains('is-visible'))", timeout=8000)
     except Exception:
         pass
     hidden = about.evaluate("[...document.querySelectorAll('[data-reveal]')].filter((e) => !e.classList.contains('is-visible')).length")

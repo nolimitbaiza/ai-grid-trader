@@ -1,8 +1,8 @@
-"""Render the AI Grid Trader screenshots shown on the home page and the case study, one per theme:
-assets/img/project-chart.png (light) and assets/img/project-chart-dark.png (dark): wide screens,
-    the demo's headline numbers and 48-hour chart for Germany;
-assets/img/project-chart-phone.png and assets/img/project-chart-phone-dark.png: phones (up to
-    640px), the same chart rendered at phone width with its legend, so the labels stay readable.
+"""Render the AI Grid Trader stills shown on phones on the home page and the case study, one per theme:
+assets/img/project-chart-phone.png and assets/img/project-chart-phone-dark.png (up to 640px wide):
+    the 48-hour chart for Germany rendered at phone width with its legend, so the labels stay readable.
+Wide screens show looping clips and their stills instead: the home page's card from
+tools/build_demo_loop.py, the case study's figure from tools/build_demo_video.py.
 
 After running it, copy the printed sizes into the width/height attributes of the matching <img>
 and <source> elements in index.html and ai-grid-trader-case-study.html.
@@ -21,8 +21,6 @@ ROOT = Path(__file__).resolve().parent.parent
 URL = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8600/"
 # (colour scheme, viewport width, device scale, file name)
 SHOTS = [
-    ("light", 1120, 1.5, "project-chart.png"),
-    ("dark", 1120, 1.5, "project-chart-dark.png"),
     ("light", 600, 2, "project-chart-phone.png"),
     ("dark", 600, 2, "project-chart-phone-dark.png"),
 ]

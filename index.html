@@ -152,14 +152,15 @@
         <div class="project-media">
           <picture>
             <source media="(max-width: 640px)" srcset="assets/img/project-chart-phone.png?v=__BUILD__" width="1028" height="734">
-            <img class="only-light" src="assets/img/project-chart.png?v=__BUILD__" width="1551" height="839" loading="lazy" decoding="async" alt="AI Grid Trader: a 48-hour trading chart with the AI's buy and sell decisions">
+            <img class="only-light" src="assets/img/demo-loop.jpg?v=__BUILD__" width="1920" height="1080" loading="lazy" decoding="async" alt="AI Grid Trader in presenter mode: Germany's electricity prices swinging from 75 to 220 euros per MWh over two days, with the AI's forecast">
           </picture>
           <picture>
             <source media="(max-width: 640px)" srcset="assets/img/project-chart-phone-dark.png?v=__BUILD__" width="1028" height="734">
-            <img class="only-dark" src="assets/img/project-chart-dark.png?v=__BUILD__" width="1551" height="839" loading="lazy" decoding="async" alt="AI Grid Trader: a 48-hour trading chart with the AI's buy and sell decisions">
+            <img class="only-dark" src="assets/img/demo-loop-dark.jpg?v=__BUILD__" width="1920" height="1080" loading="lazy" decoding="async" alt="AI Grid Trader in presenter mode: Germany's electricity prices swinging from 75 to 220 euros per MWh over two days, with the AI's forecast">
           </picture>
-          <!-- Silent demo loop (tools/build_demo_loop.py). home.js swaps it in for the screenshots on
-               wider screens when WebM plays and motion is welcome; phones keep the phone crop. -->
+          <!-- Silent demo loop (tools/build_demo_loop.py). On wider screens the still is the loop's first
+               frame, so when home.js swaps the video in, nothing visibly changes until it moves. Phones
+               keep the phone crop; reduced motion and browsers without WebM/VP9 keep the still. -->
           <video class="demo-loop" muted loop playsinline preload="none" width="1920" height="1080"
             data-light="assets/video/demo-loop.webm?v=__BUILD__" data-light-poster="assets/img/demo-loop.jpg?v=__BUILD__"
             data-dark="assets/video/demo-loop-dark.webm?v=__BUILD__" data-dark-poster="assets/img/demo-loop-dark.jpg?v=__BUILD__"

@@ -168,10 +168,12 @@
       toggleLabel.textContent = userPaused ? "Play the demo video" : "Pause the demo video";
       sync();
     });
+    // Starts a little before the card scrolls into view, so it is already moving when it arrives.
     new IntersectionObserver((entries) => {
       visible = entries[entries.length - 1].isIntersecting;
+      if (visible) loop.preload = "auto";
       sync();
-    }, { threshold: 0.25 }).observe(media);
+    }, { rootMargin: "250px 0px" }).observe(media);
     wide.addEventListener("change", sync);
     reduceMotion.addEventListener("change", sync);
     document.addEventListener("site:theme", sync);

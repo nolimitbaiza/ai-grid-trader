@@ -126,7 +126,7 @@ tools/build_assets.py       Rebuilds the app icons and QR code
 tools/build_og.py           Rebuilds the demo's link-preview image (assets/og.png) and the case study's (assets/og-case-study.png)
 tools/build_og_card.py      Rebuilds the home page and posts' preview card (assets/og-card.png)
 tools/build_demo_loop.py    Records the demo loop on the home page's project card (assets/video/)
-tools/build_project_shot.py Rebuilds the AI Grid Trader screenshots (light and dark, wide and phone)
+tools/build_project_shot.py Rebuilds the AI Grid Trader phone stills (light and dark)
 tools/build_demo_video.py   Records the case study's chart replay clip, its stills and the README GIF
 tools/build_f1_shot.py     Rebuilds the Pitwall screenshots from its live demo
 tools/writing_numbers.js   Reproduces the numbers quoted in the posts
