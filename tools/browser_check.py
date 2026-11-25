@@ -275,8 +275,9 @@ def run(pw, label, browser_type, **ctx):
             cs.wait_for_function("[...document.querySelectorAll('[data-reveal]')].every((e) => getComputedStyle(e).opacity === '1')", timeout=8000)
         except Exception:
             pass
-        hidden = cs.evaluate("[...document.querySelectorAll('[data-reveal]')].filter((e) => getComputedStyle(e).opacity !== '1').length")
-        check(f"Post {slug}: every section visible after scrolling", hidden == 0, f"{hidden} still hidden")
+        hidden = cs.evaluate("""[...document.querySelectorAll('[data-reveal]')].filter((e) => getComputedStyle(e).opacity !== '1')
+            .map((e) => `${e.className} (is-visible: ${e.classList.contains('is-visible')}, opacity ${getComputedStyle(e).opacity}, top ${Math.round(e.getBoundingClientRect().top)} of ${innerHeight})`)""")
+        check(f"Post {slug}: every section visible after scrolling", not hidden, "; ".join(hidden))
         cs.screenshot(path=str(SHOTS / f"{label.replace(' ', '_')}_{slug}.png"), full_page=True)
     if label.startswith("Chromium"):
         for page_url in ("", "ai-grid-trader-case-study", "battery-wear-cost", "perfect-hindsight-benchmark"):
