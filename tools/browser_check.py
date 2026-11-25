@@ -112,9 +112,74 @@ def run(pw, label, browser_type, **ctx):
             check(f"no accessibility violations ({theme} theme)", not found, ", ".join(found))
         page.evaluate("document.documentElement.removeAttribute('data-theme')")
 
-    page.click(".seg button[data-mode=hindsight]")
+    # Presenter mode: Present opens a step-by-step walkthrough that the arrow keys move through.
+    page.click("#btn-present")
+    page.wait_for_selector("#stage:not([hidden])")
+    step = lambda: page.evaluate("document.getElementById('stage-slide').dataset.step")
+    def callout(word):
+        try:
+            page.wait_for_function(f"(() => {{ const c = document.getElementById('stage-callout');"
+                                   f" return c && !c.hidden && c.textContent.includes('{word}'); }})()", timeout=15000)
+            return page.inner_text("#stage-callout")
+        except Exception:
+            return ""
+    dots = page.locator("#stage-dots .stage-dot").count()
+    check("presenter: opens on the market step, the page behind made inert",
+          step() == "market" and dots == 6 and page.evaluate("document.querySelector('main').inert"), f"{step()}, {dots} steps")
+    page.keyboard.press("ArrowRight")
+    text = callout("Buys")
+    check("presenter: replays to the first buy and explains it", "MW" in text and "/MWh" in text, text.replace("\n", " ")[:80])
+    page.keyboard.press("ArrowRight")
+    text = callout("Sells")
+    check("presenter: then the first sell", "MW" in text, text.replace("\n", " ")[:80])
+    page.keyboard.press("ArrowRight")
+    try:
+        page.wait_for_function("document.getElementById('stage-title').textContent.includes('48 hours')", timeout=15000)
+    except Exception:
+        pass
+    check("presenter: then the rest of the 48 hours", page.is_hidden("#stage-callout") and "trades in 48 hours" in page.inner_text("#stage-title"),
+          page.inner_text("#stage-title"))
+    page.keyboard.press("ArrowRight")
+    page.wait_for_timeout(1300)                   # headline numbers count up
+    big = page.locator("#stage-slide .stage-kpi .value").all_inner_texts()
+    check("presenter: result step shows the numbers and the chart", step() == "result" and len(big) == 4 and all(big)
+          and page.locator("#stage-chart-a .main-svg").count() > 0, " | ".join(big))
+    page.keyboard.press("ArrowLeft")
+    try:
+        page.wait_for_function("document.getElementById('stage-title').textContent.includes('48 hours')", timeout=5000)
+    except Exception:
+        pass
+    check("presenter: going back returns to the finished trades", step() == "trades" and "48 hours" in page.inner_text("#stage-title"))
+    page.click("#stage-dots .stage-dot[data-i='3']")
+    page.wait_for_timeout(600)
+    check("presenter: step dots jump to the full year", step() == "year" and page.locator("#stage-chart-a .main-svg").count() > 0)
+    page.keyboard.press("End")
+    try:
+        page.wait_for_function("[...document.querySelectorAll('.stage-qr img')].every((i) => i.complete && i.naturalWidth > 0)", timeout=5000)
+    except Exception:
+        pass
+    check("presenter: closing screen has both QR codes and the email",
+          step() == "contact" and page.evaluate("[...document.querySelectorAll('.stage-qr img')].filter((i) => i.naturalWidth > 0).length") == 2
+          and "baizak@baizakisaev.com" in page.inner_text("#stage-slide"))
+    if label.startswith("Chromium"):
+        page.wait_for_timeout(700)                # the slide has finished fading in
+        found = page.evaluate("async () => (await axe.run('#stage', {resultTypes: ['violations']})).violations"
+                              ".map(v => v.id + ' ' + v.nodes.map(n => n.target.join(' ')).join(', '))")
+        check("presenter: no accessibility violations", not found, ", ".join(found))
+    page.screenshot(path=str(SHOTS / f"{label.replace(' ', '_')}_present.png"))
+    page.keyboard.press("Escape")
     page.wait_for_timeout(300)
-    check("hindsight switch works", page.locator("#kpis .value").nth(2).inner_text() == "100%")
+    check("presenter: Esc leaves and gives the page back",
+          page.is_hidden("#stage") and not page.evaluate("document.querySelector('main').inert")
+          and page.evaluate("document.activeElement.id") == "btn-present")
+
+    page.click(".seg button[data-mode=hindsight]")
+    try:   # the emulated iPad draws slowly (a frame can take 250 ms there), so wait for the re-plan
+        page.wait_for_function("document.querySelectorAll('#kpis .value')[2].textContent === '100%'", timeout=5000)
+    except Exception:
+        pass
+    third = page.locator("#kpis .value").nth(2).inner_text()
+    check("hindsight switch works", third == "100%", third)
     page.click(".seg button[data-mode=forecast]")
 
     before = page.evaluate("getComputedStyle(document.body).backgroundColor")

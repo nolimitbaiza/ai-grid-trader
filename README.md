@@ -28,7 +28,7 @@ first visit.
   and wear, and what actually happened.
 - **The whole business case:** grid services, capacity payments and co-located solar on top of
   trading, plus 15 years of battery health, replacement cells, NPV, IRR and payback.
-- **Ready to present:** auto-play kiosk mode, a one-page PDF business case, shareable
+- **Ready to present:** a step-by-step presenter mode, auto-play kiosk mode, a one-page PDF business case, shareable
   scenario links, light and dark themes, works offline.
 
 ## Results

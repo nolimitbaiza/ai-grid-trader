@@ -42,6 +42,7 @@ const ASSETS = [
   "assets/Baizak-Isaev-Resume.pdf" + V,
   "assets/vendor/plotly-basic-2.35.2.min.js",
   "assets/img/qr-linkedin.svg",
+  "assets/img/qr-case-study.svg",           // presenter mode's closing screen
   "assets/icons/icon-192.png",
   "assets/icons/icon-512.png",
 ];

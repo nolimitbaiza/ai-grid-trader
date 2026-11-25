@@ -362,7 +362,7 @@
   }
 
   // Main chart. `upto` < N draws the battery's decisions only up to that step (auto-play).
-  function renderMainChart(r, c, upto, el) {
+  function renderMainChart(r, c, upto, el, opts = {}) {
     const { ai, prices, X } = r;
     const pick = (mode) => { const idx = []; for (let t = 0; t < upto; t++) if (ai.modes[t] === mode) idx.push(t); return idx; };
     const buys = pick(CHARGE), sells = pick(DISCHARGE);
@@ -400,21 +400,27 @@
       fillcolor: mode === CHARGE ? c.charge : c.discharge, opacity: 0.07, line: { width: 0 }, layer: "below",
     }));
     shapes.push({ type: "line", xref: "x", yref: "paper", x0: X[N / 2], x1: X[N / 2], y0: 0, y1: 1, line: { color: c.line, width: 1, dash: "dot" } });
-    if (upto < N) {
+    if (upto < N && !opts.pricesOnly) {
       const at = upto > 0 ? X[upto - 1] : X[0];
       shapes.push({ type: "line", xref: "x", yref: "paper", x0: at, x1: at, y0: 0, y1: 1, line: { color: c.ink, width: 1.5 } });
     }
     const layout = baseLayout(c, r);
+    if (opts.big) {
+      layout.font.size = 16; layout.hoverlabel.font.size = 16;
+      if ($(el).offsetWidth < 600) {      // phones: one label per day, the time on hover
+        Object.assign(layout.xaxis, { tickformat: "%a", dtick: DAY_MS, hoverformat: "%a %H:%M" });
+      }
+    }
     layout.shapes = shapes;
     layout.yaxis2 = {
       overlaying: "y", side: "right", range: [0, 105], tickmode: "array",
       tickvals: [0, 25, 50, 75, 100], ticktext: ["0%", "25%", "50%", "75%", "100%"],
-      showgrid: false, zeroline: false, fixedrange: true,
+      showgrid: false, zeroline: false, fixedrange: true, visible: !opts.pricesOnly,
     };
     return Plotly.react(el, traces, layout, PLOT_CONFIG);
   }
 
-  function renderCumChart(r, c) {
+  function renderCumChart(r, c, el = "chart-cum") {
     const traces = [
       { x: r.X, y: Array.from(r.bot.cum), name: "Bot", type: "scatter", mode: "lines",
         line: { color: c.bot, width: 2, dash: "dot" }, hovertemplate: "Bot %{y:,.0f}<extra></extra>" },
@@ -430,7 +436,7 @@
     layout.yaxis.tickformat = ",.2s";
     layout.yaxis.zeroline = true;
     layout.yaxis.zerolinecolor = c.muted;
-    Plotly.react("chart-cum", traces, layout, PLOT_CONFIG);
+    return Plotly.react(el, traces, layout, PLOT_CONFIG);
   }
 
   // Headline numbers. During an auto-play replay (t < N) they show the running totals so far.
@@ -547,6 +553,7 @@
     $("annual-status").innerHTML = annualJob
       ? `<span class="spinner" aria-hidden="true"></span>Simulating every hour of the year… ${pct}%`
       : "";
+    if (stage.on && $("stage-progress")) $("stage-progress").textContent = annualProgressText();
     keepInPlace();                        // the progress line can wrap and push the cards below it
   }
 
@@ -914,6 +921,7 @@
     $("solve-time").textContent = `Agent planned ${N} intervals in ${Math.max(1, Math.round(r.ms))} ms`;
     writeState();
     keepInPlace();
+    refreshStage();
     return r;
   }
 
@@ -1098,16 +1106,380 @@
     }
   }
 
-  // Full screen, including Safari/iPadOS (webkit-prefixed API). iPhone has none: the button hides.
+  // Full screen, including Safari/iPadOS (webkit-prefixed API). iPhone has none: Present still works,
+  // as a full-window walkthrough.
   const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement;
   const fsRequest = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen;
-  function togglePresent() {
-    if (fsElement()) {
-      (document.exitFullscreen || document.webkitExitFullscreen).call(document);
-    } else if (fsRequest) {
-      const p = fsRequest.call(document.documentElement);
-      if (p && p.catch) p.catch(() => {});
+  const fsExit = () => (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  function fsEnter() {
+    if (!fsRequest || fsElement()) return;
+    stage.fs = true;
+    const p = fsRequest.call(document.documentElement);
+    if (p && p.catch) p.catch(() => { stage.fs = false; });
+  }
+
+  // ------------------------------------------------------------------------------------
+  // Presenter mode: the demo as a short full-screen walkthrough, for talking someone through it.
+  // Next: → ↓ Page Down Space Enter (what presentation clickers send). Back: ← ↑ Page Up.
+  // 1–7 switch market, T theme, F full screen, Esc leaves. The trades step plays the 48 hours in
+  // stages: up to the first buy, then the first sell (each explained), then the rest.
+  // Large type, no settings, the chart fills the screen: readable from across a table.
+  // ------------------------------------------------------------------------------------
+  const STAGE_LABELS = { market: "The market", trades: "What the AI does", result: "The result",
+    year: "A full year", life: "Over its lifetime", contact: "Thank you" };
+  const stage = { on: false, i: 0, name: "market", sub: 0, steps: [], marks: [N], upto: 0, timer: 0, token: 0, key: "", fs: false, ownExit: false };
+  const stageKey = () => [state.p, state.d, state.seed, state.mode, uploaded ? uploaded.name : ""].join("|");
+  const timesWord = (n) => (n === 1 ? "once" : n === 2 ? "twice" : `${n} times`);
+  const unitPrice = (v) => `${v < 0 ? "−" : ""}${CUR}${Math.round(Math.abs(v)).toLocaleString("en-US")}`;
+
+  function stageSteps(r) {
+    const year = r.mk.real && hasYearData(state.p);
+    return ["market", "trades", "result", ...(year ? ["year"] : []), ...(r.stack || year ? ["life"] : []), "contact"];
+  }
+
+  // The trades step's stops: the first buy, the first sell after it, then the end of the 48 hours.
+  function stageMarks(r) {
+    const starts = tradeStarts(r);
+    const buy = starts.find((t) => r.ai.modes[t] === CHARGE);
+    const sell = starts.find((t) => r.ai.modes[t] === DISCHARGE && (buy == null || t > buy));
+    return [buy, sell].filter((t) => t != null).sort((a, b) => a - b).concat(N);
+  }
+
+  function marketOptions() {
+    return kioskQueue().map((k, n) =>
+      `<option value="${k}">${n + 1}. ${esc((SIM[k] || REAL[k]).label)}${REAL[k] ? " (real prices)" : ""}</option>`).join("")
+      + (uploaded ? `<option value="upload">Your data</option>` : "");
+  }
+
+  function openStage() {
+    if (stage.on || !last) return;
+    if (kiosk.on) stopKiosk();
+    hideExplain();
+    stage.on = true;
+    if (state.mode !== "forecast") { state.mode = "forecast"; syncControls(); render(); }   // the realistic story
+    Object.assign(stage, { i: 0, name: "market", sub: 0, upto: 0, key: stageKey(), openKey: stageKey(), fs: false });
+    document.body.classList.add("presenting");
+    for (const el of document.querySelectorAll("body > header, body > main, body > footer")) el.inert = true;
+    $("stage-market").innerHTML = marketOptions();
+    $("stage").hidden = false;
+    fsEnter();
+    $("stage").focus({ preventScroll: true });
+    renderStage(1, true);
+  }
+
+  function closeStage() {
+    if (!stage.on) return;
+    stage.on = false;
+    clearTimeout(stage.timer);
+    for (const el of $("stage").querySelectorAll(".js-plotly-plot")) Plotly.purge(el);
+    $("stage-slide").innerHTML = "";
+    $("stage").hidden = true;
+    document.body.classList.remove("presenting");
+    for (const el of document.querySelectorAll("body > header, body > main, body > footer")) el.inert = false;
+    if (stage.fs && fsElement()) { stage.ownExit = true; fsExit(); }
+    stage.fs = false;
+    if (stageKey() !== stage.openKey) { syncControls(); scheduleRender(); }   // a market chosen while presenting
+    $("btn-present").focus({ preventScroll: true });
+  }
+
+  function stageGo(i, dir, atEnd) {
+    stage.i = Math.max(0, Math.min(stage.steps.length - 1, i));
+    stage.name = stage.steps[stage.i];
+    if (stage.name === "trades") {
+      stage.sub = atEnd ? stage.marks.length - 1 : 0;
+      stage.upto = atEnd ? N : 0;
     }
+    renderStage(dir, !atEnd);
+  }
+  function stageNext() {
+    if (stage.name === "trades" && stage.sub < stage.marks.length - 1) { stage.sub++; updateTrades(true); }
+    else if (stage.i < stage.steps.length - 1) stageGo(stage.i + 1, 1);
+    else closeStage();
+  }
+  function stagePrev() {
+    if (stage.name === "trades" && stage.sub > 0) { stage.sub--; updateTrades(false); }
+    else if (stage.i > 0) stageGo(stage.i - 1, -1, true);
+  }
+
+  // After each render of the page: a new market starts its walkthrough again at the same step; the
+  // full-year results arriving fill in the steps waiting for them.
+  function refreshStage() {
+    if (!stage.on || !last) return;
+    if (stageKey() !== stage.key) {
+      stage.key = stageKey();
+      stage.sub = 0; stage.upto = 0;
+      const steps = stageSteps(last);
+      stage.i = Math.max(0, steps.indexOf(stage.name));
+      stage.name = steps[stage.i];
+      renderStage(1, true);
+    } else if (stage.name === "year" || stage.name === "life") {
+      const ready = stage.name === "year" ? !!last.year : !!(last.stack && last.life);
+      if (ready !== !$("stage-progress")) renderStage(0, false, true);   // was waiting: show the results
+    }
+  }
+
+  const stageKpis = (list, cls = "") => `<div class="stage-kpis ${cls}">${list.map((k) =>
+    `<div class="stage-kpi"><div class="label">${k.label}</div><div class="value ${k.cls || ""}" data-final="${esc(k.value)}">${k.value}</div></div>`).join("")}</div>`;
+
+  function legendHtml(...items) {
+    return `<div class="stage-legend" aria-hidden="true">${items.map(([label, color, kind]) =>
+      `<span><i class="sw sw-${kind}" style="--sw:${color}"></i>${label}</span>`).join("")}</div>`;
+  }
+  const pendingHtml = () => `<div class="stage-pending"><span class="spinner" aria-hidden="true"></span><span id="stage-progress">${annualProgressText()}</span></div>`;
+  const annualProgressText = () => `Simulating every hour of the year… ${annualJob ? Math.round((annualJob.progress || 0) * 100) : 0}%`;
+
+  // Charts on the stage are read from across a room: larger text.
+  function bigFont(id) {
+    const div = $(id);
+    if (div && div.layout) return Plotly.relayout(div, { "font.size": 16, "hoverlabel.font.size": 16, "xaxis.title.text": "" });
+  }
+
+  // Builds the step on screen. dir: 1 forward, -1 back, 0 in place. play: replay the trades.
+  function renderStage(dir, play, count) {
+    const r = last, c = palette();
+    clearTimeout(stage.timer);
+    stage.steps = stageSteps(r);
+    stage.marks = stageMarks(r);
+    stage.i = Math.min(stage.i, stage.steps.length - 1);
+    stage.name = stage.steps[stage.i];
+    stage.sub = Math.min(stage.sub, stage.marks.length - 1);
+    const step = stage.name, last1 = stage.i === stage.steps.length - 1;
+    for (const el of $("stage-slide").querySelectorAll(".js-plotly-plot")) Plotly.purge(el);
+
+    $("stage-market").value = state.p;
+    $("stage-dots").innerHTML = stage.steps.map((s, n) =>
+      `<li><button type="button" class="stage-dot" data-i="${n}" aria-label="Step ${n + 1}: ${STAGE_LABELS[s]}"${n === stage.i ? ' aria-current="step"' : ""}><span>${STAGE_LABELS[s]}</span></button></li>`).join("");
+    $("stage-count").textContent = `${stage.i + 1} / ${stage.steps.length}`;
+    $("stage-prev").disabled = stage.i === 0;
+    $("stage-next").querySelector(".lbl").textContent = last1 ? "Finish" : "Next";
+
+    const where = r.mk.real ? r.mk.label : `a simulated market (${r.mk.label.toLowerCase()})`;
+    let title = "", sub = "", body = "", after = null;
+
+    if (step === "market") {
+      const lo = Math.min(...r.prices), hi = Math.max(...r.prices);
+      title = `Electricity prices in ${esc(where)} swung from ${unitPrice(lo)} to ${unitPrice(hi)} per MWh in two days.`;
+      sub = "A battery earns by charging when power is cheap and plentiful and selling when it is scarce. Every cycle wears it out a little, and that wear has a price.";
+      body = legendHtml(["Price", c.price, "line"], ...(r.forecast ? [["The AI's forecast", c.forecast, "dash"]] : []))
+        + `<div class="stage-chart" id="stage-chart-a"></div>`;
+      after = () => renderMainChart(r, c, 0, "stage-chart-a", { big: true, pricesOnly: true });
+    } else if (step === "trades") {
+      title = "&nbsp;";
+      body = legendHtml(["Price", c.price, "line"], ["Battery charge", c.soc, "area"], ["Buys", c.charge, "up"], ["Sells", c.discharge, "down"])
+        + `<div class="stage-split"><div class="stage-chart" id="stage-chart-a"></div>
+          <aside class="stage-side"><div id="stage-ticker"></div><div class="stage-callout" id="stage-callout" aria-live="polite" hidden></div></aside></div>`;
+      after = () => updateTrades(play);
+    } else if (step === "result") {
+      const k = kpiList(r, N);
+      title = r.ai.net >= 0 ? `${money(r.ai.net)} profit in 48 hours, after battery wear.` : `${money(r.ai.net)} over 48 hours, after battery wear.`;
+      sub = `${signedMoney(r.ai.net - r.bot.net)} compared with a rule-based bot trading the same prices`
+        + (r.captured != null ? `, and ${Math.round(r.captured)}% of the most any strategy could earn knowing every price in advance.` : ".");
+      body = stageKpis(k.slice(0, 4))
+        + legendHtml(["AI agent", c.ink, "line"], ...(r.useForecast ? [["Perfect hindsight", c.soc, "dash"]] : []), ["Rule-based bot", c.bot, "dot"])
+        + `<div class="stage-chart" id="stage-chart-a"></div>`;
+      after = () => { renderCumChart(r, c, "stage-chart-a"); bigFont("stage-chart-a"); };
+    } else if (step === "year") {
+      const y = r.year, m = r.mk.meta;
+      if (!y) {
+        title = `Next: every hour of ${m.year || "the year"} in ${esc(r.mk.label)}.`;
+        sub = "The same agent, re-planning every hour on a forecast, through a full year of real prices.";
+        body = pendingHtml();
+      } else {
+        const s = y.scale, net = y.ai.net * s, roi = (net / r.capex) * 100;
+        const pct = y.hind.net > 1 ? Math.round((y.ai.net / y.hind.net) * 100) : null;
+        const days = Math.floor(m.prices.length / STEPS_PER_DAY);
+        title = `${money(net)} net revenue ${days >= 365 ? `in ${m.year || "a year"}` : "a year"} in ${esc(r.mk.label)}, on real prices.`;
+        sub = `Re-planning every hour on a forecast, the agent earns ${pct == null ? "" : `${pct}% of the hindsight maximum and `}${signedMoney((y.ai.net - y.bot.net) * s)} more than the rule-based bot`
+          + (days < 365 ? ` (scaled from ${days} days).` : ".");
+        body = stageKpis([
+          { label: "Net revenue in the year", value: money(net), cls: net < 0 ? "neg" : "" },
+          { label: "vs. rule-based bot", value: signedMoney((y.ai.net - y.bot.net) * s), cls: y.ai.net >= y.bot.net ? "pos" : "neg" },
+          { label: "Of hindsight maximum", value: pct == null ? "—" : `${pct}%` },
+          { label: "Annual return on investment", value: `${roi.toFixed(1)}%`, cls: roi < 0 ? "neg" : "" },
+        ]) + legendHtml(["AI net revenue per month", c.ink, "bar"], ["Hindsight maximum", c.soc, "dash"])
+          + `<div class="stage-chart" id="stage-chart-a"></div>`;
+        after = () => renderMonthlyChart(y, c, "stage-chart-a").then(() => bigFont("stage-chart-a"));
+      }
+    } else if (step === "life") {
+      if (!r.stack || !r.life) {
+        title = `Next: ${state.life} years of cash flow, with real battery wear.`;
+        sub = "This builds on the full-year results.";
+        body = pendingHtml();
+      } else {
+        const { ai, bot } = r.life;
+        const cyc = Math.round(r.stack.cycles);
+        const yrs = (v) => (v == null ? "—" : `${v.toFixed(1)} yrs`);
+        title = `${money(ai.npv)} lifetime value over ${state.life} years.`;
+        sub = `The AI uses ${cyc} cycles a year and ${ai.augments ? `needs new cells ${timesWord(ai.augments)}` : "never needs new cells"}; the rule-based bot ${bot.augments ? `needs them ${timesWord(bot.augments)}` : "never needs them"}`
+          + (bot.augTotal > ai.augTotal ? `, costing ${money(bot.augTotal - ai.augTotal)} more in replacement cells.` : ".");
+        body = stageKpis([
+          { label: `Net present value at ${state.disc}%`, value: money(ai.npv), cls: ai.npv < 0 ? "neg" : "pos" },
+          { label: "Internal rate of return", value: ai.irr == null ? "—" : `${(ai.irr * 100).toFixed(1)}%` },
+          { label: "Payback", value: yrs(ai.payback) },
+          { label: "New cells needed", value: ai.augments ? `${ai.augments}×` : "none" },
+        ]) + legendHtml(["AI agent", c.ink, "line"], ["Rule-based bot", c.bot, "dot"])
+          + `<div class="stage-split stage-split-even">
+            <figure class="stage-fig"><figcaption>Battery health, by year</figcaption><div class="stage-chart" id="stage-chart-a"></div></figure>
+            <figure class="stage-fig"><figcaption>Cumulative cash flow, by year</figcaption><div class="stage-chart" id="stage-chart-b"></div></figure>
+          </div>`;
+        after = () => renderLifeCharts(r, ai, bot, c, "stage-chart-a", "stage-chart-b").then(() => Promise.all([bigFont("stage-chart-a"), bigFont("stage-chart-b")]));
+      }
+    } else {
+      title = `Thank you. I'm ${OWNER.name}.`;
+      sub = "Computer Science student at North American University, focused on renewable energy. I'm open to projects and collaborations, and glad to answer questions about AI Grid Trader.";
+      body = `<div class="stage-contact">
+          <div class="stage-qr"><img src="assets/img/qr-case-study.svg" alt="QR code for the AI Grid Trader case study" width="200" height="200">
+            <b>Read the case study</b><span>baizakisaev.com/ai-grid-trader-case-study</span></div>
+          <div class="stage-qr"><img src="assets/img/qr-linkedin.svg" alt="QR code for Baizak Isaev's LinkedIn" width="200" height="200">
+            <b>Connect on LinkedIn</b><span>${OWNER.linkedin}</span></div>
+          <div class="stage-reach"><span class="label">Email</span><b>${esc(OWNER.email)}</b>
+            <span class="label">Website</span><b>baizakisaev.com</b></div>
+        </div>`;
+    }
+
+    const slide = $("stage-slide");
+    slide.dataset.step = step;
+    slide.innerHTML = `<p class="stage-kicker">${step === "contact" ? "" : `${stage.i + 1} · `}${STAGE_LABELS[step]}</p>
+      <h2 class="stage-title" id="stage-title">${title}</h2>
+      <p class="stage-sub" id="stage-sub"${sub ? "" : " hidden"}>${sub}</p>
+      <div class="stage-body">${body}</div>`;
+    if (dir) {
+      slide.classList.remove("in-next", "in-prev");
+      void slide.offsetWidth;             // restart the entrance
+      slide.classList.add(dir > 0 ? "in-next" : "in-prev");
+      $("stage-status").textContent = `Step ${stage.i + 1} of ${stage.steps.length}: ${STAGE_LABELS[step]}. ${slide.querySelector(".stage-title").textContent}`;
+    }
+    if (dir || count) countUp(slide);
+    // After layout, so the charts take their full size; skipped if the step changed meanwhile.
+    const token = ++stage.token;
+    if (after) requestAnimationFrame(() => { if (stage.on && stage.token === token) after(); });
+  }
+
+  // Trades step: the title, the running totals, the chart up to `stage.upto` and the "why" card.
+  function updateTrades(play) {
+    const r = last, key = stage.key;
+    const mark = stage.marks[stage.sub], t = mark === N ? null : mark;
+    const target = t == null ? N : t + 1;
+    const n = tradeStarts(r).length;
+    const buy = t != null && r.ai.modes[t] === CHARGE;
+    $("stage-title").textContent = t == null
+      ? (n ? `${n} trades in 48 hours: ${money(r.ai.net)} profit after battery wear.` : "No trade was worth the battery wear in these 48 hours.")
+      : buy ? "It buys when power is cheap…" : "…and sells when it is scarce.";
+    const sub = $("stage-sub");
+    sub.hidden = false;
+    sub.textContent = t == null
+      ? `${signedMoney(r.ai.net - r.bot.net)} compared with a rule-based bot on the same prices.`
+      : "Every 15 minutes it decides to buy, sell or wait. It never sees the real future, only a forecast, and re-plans every hour.";
+    $("stage-prev").disabled = stage.i === 0 && stage.sub === 0;
+    const box = $("stage-callout");
+    box.hidden = true;
+
+    const draw = () => {
+      renderMainChart(r, palette(), stage.upto, "stage-chart-a", { big: true });
+      const done = tradeStarts(r).filter((s) => s < stage.upto).length;
+      const k = kpiList(r, stage.upto);
+      $("stage-ticker").innerHTML = stageKpis([
+        { ...k[0], label: stage.upto >= N ? "Net profit, 48 hours" : "Net profit so far" },
+        { ...k[1], label: stage.upto >= N ? "vs. rule-based bot" : "vs. rule-based bot so far" },
+        { label: stage.upto >= N ? "Trades" : "Trades so far", value: String(done) },
+      ], "stage-kpis-stack");
+    };
+    const finish = () => {
+      stage.upto = target;
+      draw();
+      if (t != null) { box.innerHTML = tradeCallout(r, t); box.hidden = false; }
+    };
+    clearTimeout(stage.timer);
+    if (!play || reduceMotion.matches || stage.upto >= target) { finish(); return; }
+    const tick = () => {
+      if (!stage.on || stage.key !== key || stage.name !== "trades") return;
+      stage.upto = Math.min(target, stage.upto + 2);
+      if (stage.upto >= target) { finish(); return; }
+      draw();
+      stage.timer = setTimeout(tick, 30);
+    };
+    draw();
+    stage.timer = setTimeout(tick, 350);
+  }
+
+  // The "why" card for one trade, in a few large lines (the page's "Why this trade?" has the detail).
+  function tradeCallout(r, t) {
+    const x = E.explainTrade(r.prices, r.w, tradingBattery(state), t);
+    if (!x) return "";
+    const at = (i) => fmtClock(parseNaive(r.X[i]));
+    const buy = x.kind === "buy";
+    const why = buy
+      ? (x.expected ? `Its forecast says it can sell this energy for about <b>${unitPrice(x.expected.price)}</b> ${at(x.expected.from)}.`
+        : "It tops the battery up so it ends the two days as full as it started.")
+      : x.bought ? `It bought this energy for about <b>${unitPrice(x.bought.price)}</b> ${at(x.bought.from)}.`
+      : x.rebuy ? `It can refill for about <b>${unitPrice(x.rebuy.price)}</b> ${at(x.rebuy.from)}, so selling now pays.`
+      : "It sells energy that was already in the battery.";
+    const margin = x.margin == null ? ""
+      : `<p class="stage-margin"><b class="${x.margin >= 0 ? "pos" : "neg"}">${x.margin >= 0 ? "+" : "−"}${unitPrice(Math.abs(x.margin))}</b> per MWh ${buy ? "expected margin" : "margin"}, after losses and ${unitPrice(x.wearRound)} of battery wear</p>`;
+    return `<p class="stage-callout-kicker"><i class="sw sw-${buy ? "up" : "down"}" style="--sw:${buy ? palette().charge : palette().discharge}"></i>Why this trade? · ${at(t)}</p>
+      <p class="stage-callout-lead">${buy ? "Buys" : "Sells"} ${x.mw.toFixed(0)} MW at ${unitPrice(x.price)}/MWh</p>
+      <p class="stage-why">${why}</p>${margin}`;
+  }
+
+  // Headline numbers count up when a step opens. The exact text is put back at the end.
+  function countUp(root) {
+    if (reduceMotion.matches) return;
+    for (const el of root.querySelectorAll(".stage-kpis:not(.stage-kpis-stack) .value")) {
+      const final = el.dataset.final;
+      const m = final.match(/^([^\d]*)([\d,]+(?:\.\d+)?)(.*)$/);
+      if (!m) continue;
+      const target = parseFloat(m[2].replace(/,/g, ""));
+      const decimals = (m[2].split(".")[1] || "").length;
+      const fmt = new Intl.NumberFormat("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+      const start = performance.now(), dur = 1000;
+      const tick = (now) => {
+        if (!el.isConnected) return;
+        const k = Math.min(1, (now - start) / dur);
+        el.textContent = k === 1 ? final : m[1] + fmt.format(target * (1 - Math.pow(2, -10 * k))) + m[3];
+        if (k < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }
+  }
+
+  function onStageKey(e) {
+    if (!stage.on || e.metaKey || e.ctrlKey || e.altKey) return;
+    const tag = e.target.tagName;
+    if (tag === "SELECT" && e.key !== "Escape") return;        // the market list uses its own keys
+    if (tag === "BUTTON" && (e.key === "Enter" || e.key === " ")) return;   // the focused button clicks
+    let handled = true;
+    if (/^(ArrowRight|ArrowDown|PageDown| |Enter)$/.test(e.key)) stageNext();
+    else if (/^(ArrowLeft|ArrowUp|PageUp|Backspace)$/.test(e.key)) stagePrev();
+    else if (e.key === "Home") stageGo(0, -1);
+    else if (e.key === "End") stageGo(stage.steps.length - 1, 1);
+    else if (e.key === "Escape") closeStage();
+    else if (/^[1-9]$/.test(e.key) && kioskQueue()[+e.key - 1]) selectMarket(kioskQueue()[+e.key - 1]);
+    else if (/^t$/i.test(e.key)) window.Site.toggleTheme();
+    else if (/^f$/i.test(e.key) && fsRequest) {
+      if (fsElement()) { stage.ownExit = true; stage.fs = false; fsExit(); } else fsEnter();
+    } else handled = false;
+    if (handled) { e.preventDefault(); e.stopImmediatePropagation(); }
+  }
+
+  // Leaving full screen with the browser's own Esc (pages don't receive that key) ends the walkthrough.
+  function onFullscreenChange() {
+    if (stage.ownExit) { stage.ownExit = false; return; }
+    if (stage.on && stage.fs && !fsElement()) { stage.fs = false; closeStage(); }
+  }
+
+  function bindStage() {
+    $("btn-present").addEventListener("click", openStage);
+    $("stage-close").addEventListener("click", closeStage);
+    $("stage-prev").addEventListener("click", stagePrev);
+    $("stage-next").addEventListener("click", stageNext);
+    $("stage-dots").addEventListener("click", (e) => {
+      const b = e.target.closest(".stage-dot");
+      if (b && +b.dataset.i !== stage.i) stageGo(+b.dataset.i, +b.dataset.i > stage.i ? 1 : -1);
+    });
+    $("stage-market").addEventListener("change", (e) => { selectMarket(e.target.value); $("stage").focus({ preventScroll: true }); });
+    document.addEventListener("keydown", onStageKey, true);
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", onFullscreenChange);
   }
 
   // ------------------------------------------------------------------------------------
@@ -1120,6 +1492,7 @@
     requestAnimationFrame(() => setTimeout(() => {
       if (kiosk.on) renderMainChart(last, palette(), kiosk.t, "chart-main");
       else scheduleRender();
+      if (stage.on) renderStage(0, true);
     }, 0));
   }
 
@@ -1167,7 +1540,7 @@
   }
 
   function startKiosk() {
-    if (kiosk.on) return;
+    if (kiosk.on || stage.on) return;
     kiosk.on = true;
     document.body.classList.add("kiosk");
     window.scrollTo({ top: 0 });
@@ -1361,13 +1734,12 @@
     syncControls();
     render();
 
-    if (!fsRequest) $("btn-present").hidden = true;
     // A new release reloads open pages once (site.js). The scenario lives in the URL, so nothing
     // is lost, but a presenter who started auto-play by hand is not interrupted.
-    window.Site.canReload = () => !(kiosk.on && !kiosk.auto);
+    window.Site.canReload = () => !(kiosk.on && !kiosk.auto) && !stage.on;
 
     $("btn-share").addEventListener("click", share);
-    $("btn-present").addEventListener("click", togglePresent);
+    bindStage();
     $("btn-shuffle").addEventListener("click", newDay);
     const dataYear = (Object.values(REAL)[0] || {}).year;
     if (dataYear) document.querySelectorAll(".data-year").forEach((el) => { el.textContent = dataYear; });
@@ -1417,8 +1789,9 @@
       }, { capture: true, passive: true });
     }
 
-    // Keyboard shortcuts: 1–7 markets, N new day, H hindsight/forecast, F full screen, K auto-play, T theme.
+    // Keyboard shortcuts: 1–7 markets, N new day, H hindsight/forecast, F present, K auto-play, T theme.
     document.addEventListener("keydown", (e) => {
+      if (stage.on) return;                  // presenter mode has its own keys (onStageKey)
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (/^(input|textarea|select)$/i.test(e.target.tagName) && e.target.type !== "range") return;
       if ($("report-dialog").open) return;
@@ -1427,7 +1800,7 @@
       if (n >= 1 && n <= q.length) selectMarket(q[n - 1]);
       else if (/^n$/i.test(e.key)) newDay();
       else if (/^h$/i.test(e.key)) setMode(state.mode === "forecast" ? "hindsight" : "forecast");
-      else if (/^f$/i.test(e.key)) togglePresent();
+      else if (/^f$/i.test(e.key)) openStage();
       else if (/^k$/i.test(e.key)) (kiosk.on ? stopKiosk() : startKiosk());
       else if (/^t$/i.test(e.key)) window.Site.toggleTheme();
     });

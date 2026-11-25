@@ -8,6 +8,7 @@ How to present the demo, use your own price data, and navigate it with assistive
 
 | To… | Do this |
 |---|---|
+| Talk someone through it | Click **Present** or press **F**. It goes full screen and walks through the story one step at a time, in large type: the market's prices, the AI's first buy and first sell (each with why it made that trade), the rest of the 48 hours, the result against the rule-based bot, the full year and the battery's lifetime, then a closing screen with QR codes for the case study and LinkedIn. **→**, **Space** or a presentation clicker moves on; **←** goes back; **1–7** switches market; **Esc** leaves. |
 | Run it unattended on a screen | Open **[baizakisaev.com/ai-grid-trader?kiosk=1](https://baizakisaev.com/ai-grid-trader?kiosk=1)**. It goes full-window and auto-plays every market while the headline numbers count up, with a QR code to LinkedIn in the corner. Scrolling keeps it playing; a tap, click or key hands control to the visitor; after 60 s idle it starts again. |
 | Start or stop auto-play by hand | Click **Auto-play**, or press **K** |
 | Switch market | Click a chip, or press **1–7** (four simulated, then California, Germany, South Australia) |
@@ -20,7 +21,6 @@ How to present the demo, use your own price data, and navigate it with assistive
 | Leave a one-page business case | **Business case** → enter their name → *Save as PDF* in the print window |
 | Send the exact scenario you showed | **Share**: the link stores every setting |
 | Light or dark | The sun/moon button, or **T** (remembered) |
-| Full screen | **Present**, or **F** |
 
 **No Wi-Fi at the venue?** Open [the demo](https://baizakisaev.com/ai-grid-trader) once while you're
 online; after that it opens with no connection, because the browser keeps a copy. You can also

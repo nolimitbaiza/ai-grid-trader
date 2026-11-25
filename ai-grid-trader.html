@@ -63,7 +63,7 @@
           <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           <span class="lbl">Share</span>
         </button>
-        <button class="btn" id="btn-present" type="button" aria-label="Present full screen" title="Full screen (F)">
+        <button class="btn" id="btn-present" type="button" aria-label="Present: a step-by-step walkthrough" title="Present a step-by-step walkthrough (F)">
           <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           <span class="lbl">Present</span>
         </button>
@@ -300,6 +300,29 @@
 
   <article id="report" aria-hidden="true"></article>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <!-- Presenter mode (Present / F): a step-by-step walkthrough, filled in by app.js -->
+  <div class="stage" id="stage" role="dialog" aria-modal="true" aria-labelledby="stage-title" tabindex="-1" hidden>
+    <div class="stage-bar">
+      <div class="stage-brand"><b>AI Grid Trader</b><span>by Baizak Isaev</span></div>
+      <label class="stage-pick"><span class="sr-only">Market</span><select id="stage-market"></select></label>
+      <ol class="stage-dots" id="stage-dots" aria-label="Steps"></ol>
+      <span class="stage-keys" aria-hidden="true"><kbd>←</kbd> <kbd>→</kbd> to move · <kbd>Esc</kbd> to leave</span>
+      <button class="btn btn-icon" id="stage-close" type="button" aria-label="Leave presenter mode" title="Leave (Esc)">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="stage-slide" id="stage-slide"></div>
+    <div class="stage-nav">
+      <button class="btn" id="stage-prev" type="button" aria-label="Previous">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <span class="stage-count" id="stage-count"></span>
+      <button class="btn btn-primary" id="stage-next" type="button"><span class="lbl">Next</span>
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+    <p class="sr-only" id="stage-status" aria-live="polite"></p>
+  </div>
 
   <script src="assets/vendor/plotly-basic-2.35.2.min.js"></script>
   <script src="assets/data/markets.js?v=__BUILD__"></script>

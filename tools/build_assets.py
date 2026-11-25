@@ -1,4 +1,4 @@
-"""Generate the app icons and the LinkedIn QR code.
+"""Generate the app icons and the QR codes (LinkedIn, and the case study for presenter mode).
 
 Usage: python tools/build_assets.py   (needs: pip install pillow qrcode)
 """
@@ -36,8 +36,10 @@ icon(512, maskable=True, path=icons / "icon-maskable-512.png")
 
 img_dir = ROOT / "assets" / "img"
 img_dir.mkdir(parents=True, exist_ok=True)
-qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_M, border=1)
-qr.add_data("https://www.linkedin.com/in/baizakisaev/")
-qr.make(fit=True)
-qr.make_image(image_factory=qrcode.image.svg.SvgPathImage).save(img_dir / "qr-linkedin.svg")
-print("icons and QR code written")
+for url, name in (("https://www.linkedin.com/in/baizakisaev/", "qr-linkedin.svg"),
+                  ("https://baizakisaev.com/ai-grid-trader-case-study", "qr-case-study.svg")):
+    qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_M, border=1)
+    qr.add_data(url)
+    qr.make(fit=True)
+    qr.make_image(image_factory=qrcode.image.svg.SvgPathImage).save(img_dir / name)
+print("icons and QR codes written")
