@@ -141,12 +141,18 @@ def run(pw, label, browser_type, **ctx):
           resume["header"] and resume["contact"] and resume["status"] == 200 and "pdf" in (resume["type"] or ""), str(resume))
     # The header's name appears only once the hero's name row has scrolled away.
     brand = "getComputedStyle(document.querySelector('.site-header .brand-link')).visibility"
+    # Jumps are instant (the page scrolls smoothly, which is slow on CI) and each state is awaited.
+    def settle(want):
+        try:
+            about.wait_for_function(f"{brand} === '{want}'", timeout=4000)
+        except Exception:
+            pass
     at_top = about.evaluate(brand)
-    about.evaluate("scrollTo(0, 600)")
-    about.wait_for_timeout(600)
+    about.evaluate("scrollTo({top: 600, behavior: 'instant'})")
+    settle("visible")
     scrolled = about.evaluate(brand)
-    about.evaluate("scrollTo(0, 0)")
-    about.wait_for_timeout(600)
+    about.evaluate("scrollTo({top: 0, behavior: 'instant'})")
+    settle("hidden")
     check("Home page: header name hidden at top, shown after scrolling, hidden again",
           (at_top, scrolled, about.evaluate(brand)) == ("hidden", "visible", "hidden"), f"{at_top} / {scrolled}")
     about.click(".project-link")
