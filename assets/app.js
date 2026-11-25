@@ -547,6 +547,7 @@
     $("annual-status").innerHTML = annualJob
       ? `<span class="spinner" aria-hidden="true"></span>Simulating every hour of the year… ${pct}%`
       : "";
+    keepInPlace();                        // the progress line can wrap and push the cards below it
   }
 
   function renderAnnual(r) {
@@ -617,10 +618,10 @@
   function renderStack(r) {
     const st = r.stack, sec = $("stack");
     sec.classList.toggle("pending", !st);
-    $("stack-note").textContent = st
-      ? `Per year, ${st.basis}. Energy trading is after battery wear; grid services and capacity payments are paid for availability.`
-      : "Waiting for the full-year simulation…";
-    if (!st) return;
+    // While the full year re-runs, the card dims and keeps its text (a shorter "Waiting..." line
+    // would move the sliders under it).
+    if (!st) { if (!$("stack-note").textContent) $("stack-note").textContent = "Waiting for the full-year simulation…"; return; }
+    $("stack-note").textContent = `Per year, ${st.basis}. Energy trading is after battery wear; grid services and capacity payments are paid for availability.`;
     const c = palette();
     const parts = [
       { label: "Energy trading", value: st.energy, color: c.ink },
@@ -672,7 +673,7 @@
   function renderLifetime(r) {
     const sec = $("lifetime");
     sec.classList.toggle("pending", !r.stack);
-    if (!r.stack) { $("life-note").textContent = "Waiting for the full-year simulation…"; return; }
+    if (!r.stack) { if (!$("life-note").textContent) $("life-note").textContent = "Waiting for the full-year simulation…"; return; }
     const ai = E.lifetime(lifeInputs(r, "ai")), bot = E.lifetime(lifeInputs(r, "bot"));
     r.life = { ai, bot };
     $("life-note").textContent = `${state.life} years of cash flow with physical battery wear. Revenue per year comes from the revenue streams above (${r.stack.basis}); here battery wear is paid for when new cells are needed, instead of the agent's internal wear price.`;
@@ -912,8 +913,37 @@
     if (!clickBound && $("chart-main").on) { $("chart-main").on("plotly_click", onChartClick); clickBound = true; }
     $("solve-time").textContent = `Agent planned ${N} intervals in ${Math.max(1, Math.round(r.ms))} ms`;
     writeState();
+    keepInPlace();
     return r;
   }
+
+  // The slider being dragged stays where it is on screen. A new value re-renders text above it (the
+  // summary under the chart, table notes, and the full-year results a few seconds later), which can
+  // grow or shrink by a line; the page scrolls by that amount so the slider never moves under the
+  // pointer. The browser's own scroll anchoring is paused meanwhile (older Safari has none, newer
+  // browsers would correct a second time), so every browser behaves the same. The hold ends as soon
+  // as the visitor scrolls, clicks or types anywhere else, so the page never pulls them back.
+  let anchor = null;
+  function holdInPlace(el) {
+    if (anchor && anchor.el === el) return;
+    anchor = { el, top: el.getBoundingClientRect().top };
+    document.documentElement.style.overflowAnchor = "none";
+  }
+  function release() {
+    anchor = null;
+    document.documentElement.style.overflowAnchor = "";
+  }
+  function keepInPlace() {
+    if (!anchor) return;
+    if (kiosk.on || !anchor.el.offsetParent) { release(); return; }
+    const shift = anchor.el.getBoundingClientRect().top - anchor.top;
+    if (Math.abs(shift) >= 1) window.scrollBy({ top: shift, behavior: "instant" });
+  }
+  // Content that changes size outside a render (chart redraws, the full-year progress line) is caught
+  // here: the observer runs after layout and before the frame is painted, so nothing visibly jumps.
+  if ("ResizeObserver" in window) new ResizeObserver(() => keepInPlace()).observe(document.querySelector("main"));
+  const letGo = (e) => { if (anchor && !(e.target && e.target.type === "range")) release(); };
+  for (const type of ["wheel", "touchmove", "mousedown", "keydown"]) addEventListener(type, letGo, { capture: true, passive: true });
 
   let queued = false;
   function scheduleRender() {
@@ -939,8 +969,10 @@
         <label for="in-${c.key}"><span>${c.label}</span><output id="out-${c.key}"></output></label>
         <input type="range" id="in-${c.key}" min="${c.min}" max="${c.max}" step="${c.step}">`;
       $(c.group ? `${c.group}-controls` : c.main ? "main-controls" : "more-controls").appendChild(wrap);
+      if (fieldObserver) fieldObserver.observe(wrap);
       const input = wrap.querySelector("input");
       input.addEventListener("input", () => {
+        holdInPlace(input);
         state[c.key] = parseFloat(input.value);
         setPct(input);
         scheduleRender();
@@ -962,7 +994,39 @@
       .map(([k, label]) => `<button type="button" class="chip" data-key="${k}">${esc(label)}</button>`).join("");
   }
 
+  // Slider values change length as they move ("none" -> "$40 per kW per year"). Each value keeps the
+  // width of its longest possible text, so its label never re-wraps and the slider never moves up or
+  // down while it is dragged. A field too narrow for name and value side by side gives the value a
+  // line of its own (.stacked), whatever the value.
+  const measure = document.createElement("canvas").getContext("2d");
+  let fittedFor = "";
+  function fitOutputs(force) {
+    const cs = getComputedStyle($("out-cap"));
+    const key = CUR + cs.fontWeight + cs.fontSize + cs.fontFamily;
+    if (!force && key === fittedFor) return;
+    fittedFor = key;
+    measure.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    for (const c of CONTROLS) {
+      const n = Math.round((c.max - c.min) / c.step);
+      const every = Math.max(1, Math.ceil(n / 400));
+      const texts = c.simOnly ? ["real data"] : [];
+      for (let i = 0; i <= n; i += every) texts.push(c.fmt(+(c.min + i * c.step).toFixed(6)));
+      texts.push(c.fmt(c.max));
+      const widest = Math.max(...texts.map((t) => measure.measureText(t).width));
+      $("out-" + c.key).style.minWidth = Math.ceil(widest * 1.06 + 2) + "px";   // + room for tabular digits
+    }
+    document.querySelectorAll(".field").forEach(stackIfNarrow);
+  }
+  function stackIfNarrow(field) {
+    const width = field.clientWidth;
+    if (!width) return;                   // hidden (closed settings, section not shown yet): done when it appears
+    field.classList.toggle("stacked", parseFloat(field.querySelector("output").style.minWidth) > width * 0.5);
+  }
+  const fieldObserver = "ResizeObserver" in window
+    ? new ResizeObserver((entries) => entries.forEach((e) => stackIfNarrow(e.target))) : null;
+
   function updateOutputs() {
+    fitOutputs();
     for (const c of CONTROLS) {
       const disabled = !!(c.simOnly && !SIM[state.p]);
       $("in-" + c.key).disabled = disabled;
@@ -1314,7 +1378,7 @@
     $("btn-report").addEventListener("click", openReportDialog);
     $("day-select").addEventListener("change", (e) => { fresh = true; state.d = parseInt(e.target.value, 10) || 0; scheduleRender(); });
     addEventListener("resize", placeSeg, { passive: true });
-    if (document.fonts) document.fonts.ready.then(placeSeg);   // Inter swaps in after first paint
+    if (document.fonts) document.fonts.ready.then(() => { placeSeg(); fitOutputs(true); });   // Inter swaps in after first paint
 
     $("report-dialog").addEventListener("close", () => {
       const dlg = $("report-dialog");

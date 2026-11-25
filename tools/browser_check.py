@@ -70,6 +70,29 @@ def run(pw, label, browser_type, **ctx):
         life = page.locator("#life-kpis .value").all_inner_texts()
         check("lifetime figures shown", len(life) == 4 and all(life), " | ".join(life))
         check("lifetime charts drawn", page.locator("#chart-health .main-svg").count() > 0 and page.locator("#chart-cash .main-svg").count() > 0)
+        # Dragging a slider end to end must not move it up or down in its card (values such as
+        # "none" -> "$40 per kW per year" used to re-wrap the label; text above it changed length).
+        moved = page.evaluate("""async () => {
+            const out = [];
+            for (const id of ['in-capp', 'in-solar', 'in-clife', 'in-res']) {
+                const input = document.getElementById(id), card = input.closest('.card'), start = input.value, tops = new Set();
+                for (let i = 0; i <= 8; i++) {
+                    input.value = +input.min + (input.max - input.min) * i / 8;
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+                    tops.add(Math.round(input.getBoundingClientRect().top - card.getBoundingClientRect().top));
+                }
+                input.value = start; input.dispatchEvent(new Event('input', { bubbles: true }));
+                const t = [...tops];
+                if (Math.max(...t) - Math.min(...t) > 2) out.push(id + ' ' + t.join('/'));
+            }
+            return out;
+        }""")
+        check("sliders stay level while dragged", not moved, "; ".join(moved))
+        try:   # the drags above re-run the full year; let it settle before the checks that follow
+            page.wait_for_function("!document.getElementById('stack').classList.contains('pending')", timeout=120000)
+        except Exception:
+            pass
 
     page.click("#explain-first")                  # keyboard-friendly route to "Why this trade?"
     page.wait_for_timeout(300)
