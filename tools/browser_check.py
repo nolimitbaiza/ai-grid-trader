@@ -284,6 +284,12 @@ def run(pw, label, browser_type, **ctx):
           "12,700+" in f1 and "33%" in f1 and "PostgreSQL" in f1, " ".join(f1.split())[-200:])
     skills = about.evaluate("[...document.querySelectorAll('#about .skills-list > div')].map(d => d.querySelector('dt').textContent + ':' + d.querySelectorAll('li').length)")
     check("Home page: Skills in About, in four groups", len(skills) == 4 and all(not s.endswith(":0") for s in skills), str(skills))
+    # The screenshot loads lazily (Firefox leaves currentSrc empty until then): bring it near first.
+    about.evaluate("document.querySelector('#work .project:nth-of-type(2)').scrollIntoView({block: 'center', behavior: 'instant'})")
+    try:
+        about.wait_for_function("[...document.querySelectorAll('#work .project:nth-of-type(2) picture img')].some((i) => i.complete && i.currentSrc)", timeout=8000)
+    except Exception:
+        pass
     webp = about.evaluate("""() => [...document.querySelectorAll('#work .project:nth-of-type(2) picture img')].filter(i => i.currentSrc)
         .map(i => i.currentSrc.split('/').pop().split('?')[0])""")
     check("Home page: Pitwall screenshot loads as WebP", webp and all(w.endswith(".webp") for w in webp), str(webp))
