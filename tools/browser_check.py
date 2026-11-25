@@ -264,13 +264,15 @@ def run(pw, label, browser_type, **ctx):
                 found = cs.evaluate(audit)
                 check(f"Post {slug}: no accessibility violations ({theme} theme)", not found, ", ".join(found))
             cs.evaluate("document.documentElement.removeAttribute('data-theme')")
+        # Bring each fading section into view in turn (timed scroll steps were too fast for CI's iPad run).
         cs.evaluate("""async () => {
-            for (let y = 0; y <= document.body.scrollHeight + innerHeight; y += innerHeight / 2) {
-                scrollTo({top: y, behavior: 'instant'}); await new Promise((r) => setTimeout(r, 120));
+            for (const el of document.querySelectorAll('[data-reveal]')) {
+                el.scrollIntoView({block: 'center', behavior: 'instant'});
+                await new Promise((r) => setTimeout(r, 150));
             }
         }""")
         try:
-            cs.wait_for_function("[...document.querySelectorAll('[data-reveal]')].every((e) => getComputedStyle(e).opacity === '1')", timeout=4000)
+            cs.wait_for_function("[...document.querySelectorAll('[data-reveal]')].every((e) => getComputedStyle(e).opacity === '1')", timeout=8000)
         except Exception:
             pass
         hidden = cs.evaluate("[...document.querySelectorAll('[data-reveal]')].filter((e) => getComputedStyle(e).opacity !== '1').length")
