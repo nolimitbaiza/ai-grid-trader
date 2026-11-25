@@ -356,11 +356,13 @@ def run(pw, label, browser_type, **ctx):
         }
         scrollTo({top: 0, behavior: 'instant'}); await new Promise((r) => setTimeout(r, 900));
     }""")
-    try:   # staggered fades can still be finishing
-        about.wait_for_function("[...document.querySelectorAll('[data-reveal]')].every((e) => getComputedStyle(e).opacity === '1')", timeout=4000)
+    # Checks that each one was revealed (is-visible), not how far its fade has got: headless WebKit
+    # on CI can stall a transition part way.
+    try:
+        about.wait_for_function("[...document.querySelectorAll('[data-reveal]')].every((e) => e.classList.contains('is-visible'))", timeout=4000)
     except Exception:
         pass
-    hidden = about.evaluate("[...document.querySelectorAll('[data-reveal]')].filter((e) => getComputedStyle(e).opacity !== '1').length")
+    hidden = about.evaluate("[...document.querySelectorAll('[data-reveal]')].filter((e) => !e.classList.contains('is-visible')).length")
     check("Home page: every section is visible after scrolling", hidden == 0, f"{hidden} still hidden")
     about.screenshot(path=str(SHOTS / f"{label.replace(' ', '_')}_about.png"), full_page=True)
     # The project screenshot has a light and a dark version: exactly one shows in each theme.
