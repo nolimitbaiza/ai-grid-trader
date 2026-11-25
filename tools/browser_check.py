@@ -175,10 +175,10 @@ def run(pw, label, browser_type, **ctx):
     # Sections fade in as they scroll into view: scroll through like a reader, then check that
     # every one of them ended up visible before taking the full-page screenshot.
     about.evaluate("""async () => {
-        for (let y = 0; y <= document.body.scrollHeight; y += innerHeight / 2) {
-            scrollTo(0, y); await new Promise((r) => setTimeout(r, 120));
+        for (let y = 0; y <= document.body.scrollHeight + innerHeight; y += innerHeight / 2) {
+            scrollTo({top: y, behavior: 'instant'}); await new Promise((r) => setTimeout(r, 120));
         }
-        scrollTo(0, 0); await new Promise((r) => setTimeout(r, 900));
+        scrollTo({top: 0, behavior: 'instant'}); await new Promise((r) => setTimeout(r, 900));
     }""")
     try:   # staggered fades can still be finishing
         about.wait_for_function("[...document.querySelectorAll('[data-reveal]')].every((e) => getComputedStyle(e).opacity === '1')", timeout=4000)
@@ -232,10 +232,10 @@ def run(pw, label, browser_type, **ctx):
             check(f"Case study: no accessibility violations ({theme} theme)", not found, ", ".join(found))
         cs.evaluate("document.documentElement.removeAttribute('data-theme')")
     cs.evaluate("""async () => {
-        for (let y = 0; y <= document.body.scrollHeight; y += innerHeight / 2) {
-            scrollTo(0, y); await new Promise((r) => setTimeout(r, 120));
+        for (let y = 0; y <= document.body.scrollHeight + innerHeight; y += innerHeight / 2) {
+            scrollTo({top: y, behavior: 'instant'}); await new Promise((r) => setTimeout(r, 120));
         }
-        scrollTo(0, 0); await new Promise((r) => setTimeout(r, 900));
+        scrollTo({top: 0, behavior: 'instant'}); await new Promise((r) => setTimeout(r, 900));
     }""")
     try:   # staggered fades can still be finishing
         cs.wait_for_function("[...document.querySelectorAll('[data-reveal]')].every((e) => getComputedStyle(e).opacity === '1')", timeout=4000)
