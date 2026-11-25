@@ -355,12 +355,21 @@ def run(pw, label, browser_type, **ctx):
     # every one of them ended up visible before taking the full-page screenshot.
     # Each section is brought into view in turn: a fast sweep can skip past one before headless
     # WebKit on CI has reported it on screen.
+    # A section still hidden after the pass gets another look (up to twice), as a reader scrolling
+    # back would give it: CI's headless WebKit occasionally misses one visibility notification.
     about.evaluate("""async () => {
+        const wait = (ms) => new Promise((r) => setTimeout(r, ms));
         for (const el of document.querySelectorAll('[data-reveal]')) {
             el.scrollIntoView({block: 'center', behavior: 'instant'});
-            await new Promise((r) => setTimeout(r, 150));
+            await wait(150);
         }
-        scrollTo({top: 0, behavior: 'instant'}); await new Promise((r) => setTimeout(r, 900));
+        for (let pass = 0; pass < 2; pass++) {
+            const left = [...document.querySelectorAll('[data-reveal]:not(.is-visible)')];
+            if (!left.length) break;
+            scrollTo({top: 0, behavior: 'instant'}); await wait(300);
+            for (const el of left) { el.scrollIntoView({block: 'center', behavior: 'instant'}); await wait(400); }
+        }
+        scrollTo({top: 0, behavior: 'instant'}); await wait(900);
     }""")
     # Checks that each one was revealed (is-visible), not how far its fade has got: headless WebKit
     # on CI can stall a transition part way.
