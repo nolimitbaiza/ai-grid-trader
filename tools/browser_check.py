@@ -30,6 +30,17 @@ def check(name, ok, detail=""):
         failures.append(name)
 
 
+# Cloudflare adds its analytics beacon to the live site. It is not part of the
+# demo, and some networks block it, so failing to load it is not counted.
+BEACON_HOST = "static.cloudflareinsights.com"
+
+
+def counts_as_error(m):
+    if m.type != "error" or "profile.jpg" in m.text or "404" in m.text:
+        return False
+    return BEACON_HOST not in (m.location or {}).get("url", "") and BEACON_HOST not in m.text
+
+
 def run(pw, label, browser_type, **ctx):
     print(f"\n== {label}")
     browser = browser_type.launch()
@@ -38,7 +49,7 @@ def run(pw, label, browser_type, **ctx):
     page = context.new_page()
     errors = []
     page.on("pageerror", lambda e: errors.append(str(e)))
-    page.on("console", lambda m: m.type == "error" and "profile.jpg" not in m.text and "404" not in m.text and errors.append(m.text))
+    page.on("console", lambda m: counts_as_error(m) and errors.append(m.text))
     page.goto(URL + "ai-grid-trader", wait_until="networkidle")
 
     kpis = page.locator("#kpis .value").all_inner_texts()
