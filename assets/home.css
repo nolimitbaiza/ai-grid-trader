@@ -488,6 +488,36 @@ body { font-family: var(--font-sans); font-optical-sizing: auto; }
 .cs-note { display: block; color: var(--muted); font-size: 0.75rem; font-weight: 500; }
 .cs-body .cs-fine { color: var(--muted); font-size: 0.8125rem; }
 
+/* Case study: the guide to the demo */
+.cs-body .cs-toc { display: flex; flex-wrap: wrap; gap: 6px; padding: 0; list-style: none; }
+.cs-toc a {
+  display: inline-block; padding: 5px 11px; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--surface); color: var(--muted); font-size: var(--step--1); line-height: 1.3; text-decoration: none;
+  transition: color var(--dur-fast, 150ms) ease, border-color var(--dur-fast, 150ms) ease;
+}
+.cs-toc a:hover { color: var(--ink); border-color: var(--accent); }
+.cs-features { display: grid; border-top: 1px solid var(--line); }
+.cs-features > div {
+  display: grid; grid-template-columns: minmax(0, 13rem) minmax(0, 1fr); gap: 4px var(--space-lg);
+  padding: 12px 0; border-bottom: 1px solid var(--line);
+}
+.cs-features dt { color: var(--ink); font-weight: 600; line-height: 1.5; }
+.cs-features dd { margin: 0; color: var(--muted); line-height: 1.6; }
+.cs-body kbd {
+  display: inline-block; min-width: 1.6em; padding: 1px 6px; border: 1px solid var(--line); border-bottom-width: 2px;
+  border-radius: 6px; background: var(--surface-raised); color: var(--ink); font: 500 0.75rem/1.5 var(--font-mono);
+  text-align: center; vertical-align: 0.1em; white-space: nowrap;
+}
+.cs-body h3 kbd { margin-left: 6px; }
+.cs-up { color: color-mix(in srgb, var(--charge) 78%, var(--ink)); }
+.cs-down { color: color-mix(in srgb, var(--discharge) 82%, var(--ink)); }
+.cs-sw { display: inline-block; width: 16px; margin-right: 8px; vertical-align: 0.3em; }
+.cs-sw-price { height: 3px; border-radius: 2px; background: var(--price); }
+.cs-sw-dash { height: 0; border-top: 2px dashed var(--forecast, var(--muted)); }
+.cs-sw-area { height: 10px; vertical-align: 0.05em; border-top: 2px solid var(--soc); background: color-mix(in srgb, var(--soc) 16%, transparent); }
+.cs-table--text th, .cs-table--text td { text-align: left; white-space: normal; }
+.cs-table--text tbody th { white-space: nowrap; }
+
 /* ---------- Posts (battery-wear-cost.html, perfect-hindsight-benchmark.html) ---------- */
 .post-page .cs-hero h1 { max-width: 22ch; }
 .post-page .cs-meta { grid-template-columns: repeat(3, max-content); gap: var(--space-md) var(--space-2xl); }
@@ -603,4 +633,6 @@ body { font-family: var(--font-sans); font-optical-sizing: auto; }
   .post-body .cs-table th, .post-body .cs-table td { padding: 10px 8px; }
   .post-body .cs-table th:first-child, .post-body .cs-table td:first-child { padding-left: 12px; }
   .post-body .cs-table th:last-child, .post-body .cs-table td:last-child { padding-right: 12px; }
+  .cs-features > div { grid-template-columns: minmax(0, 1fr); }         /* guide: name above its description */
+  .cs-table--text th, .cs-table--text td { padding: 10px 12px; }
 }

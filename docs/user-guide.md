@@ -4,6 +4,9 @@ How to present the demo, use your own price data, and navigate it with assistive
 
 [Back to the project overview](../README.md)
 
+For a description of every feature and setting, see the guide in the
+[case study](https://baizakisaev.com/ai-grid-trader-case-study#guide).
+
 ## Presenting it
 
 | To… | Do this |

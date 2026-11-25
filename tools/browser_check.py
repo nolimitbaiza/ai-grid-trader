@@ -223,6 +223,7 @@ def run(pw, label, browser_type, **ctx):
     check("demo: header and intro both link to the case study",
           page.get_attribute(".demo-header .nav-case", "href") == "ai-grid-trader-case-study" and page.is_visible(".demo-header .nav-case")
           and page.get_attribute(".intro .case-card", "href") == "ai-grid-trader-case-study" and page.is_visible(".intro .case-card"))
+    check("demo: footer links to the how-to guide", page.locator('footer a[href="ai-grid-trader-case-study#guide"]').count() == 1)
     check("demo: the 'Agent sees' switch shows its sliding pill", page.evaluate("document.querySelector('.seg').classList.contains('has-ind')"))
 
     about = context.new_page()
@@ -331,8 +332,20 @@ def run(pw, label, browser_type, **ctx):
     cs.on("pageerror", lambda e: errors.append(str(e)))
     cs.goto(URL + "ai-grid-trader-case-study", wait_until="networkidle")
     sections = cs.evaluate("[...document.querySelectorAll('main section[id]')].map((s) => s.id).join(',')")
-    check("Case study: problem, approach, results, engineering, next", sections == "problem,approach,results,engineering,next,contact", sections)
-    check("Case study: both results tables", cs.locator(".cs-table tbody tr").count() == 6)
+    check("Case study: problem, approach, results, engineering, next, guide", sections == "problem,approach,results,engineering,next,guide,contact", sections)
+    check("Case study: both results tables", cs.locator("table[aria-labelledby^='t-'] tbody tr").count() == 6)
+    guide = cs.evaluate("""() => {
+        const links = [...document.querySelectorAll('#guide .cs-toc a')].map((a) => a.getAttribute('href'));
+        return { links: links.length, broken: links.filter((h) => !document.querySelector(h)),
+                 features: document.querySelectorAll('#guide .cs-features > div').length,
+                 keys: document.querySelectorAll('#guide .cs-table tbody tr').length,
+                 hero: document.querySelector('.cs-hero a[href="#guide"]') !== null };
+    }""")
+    check("Case study: guide has contents, feature lists and shortcuts, all links work",
+          guide["links"] == 12 and not guide["broken"] and guide["features"] >= 30 and guide["keys"] == 10 and guide["hero"], str(guide))
+    cs.click('.cs-hero a[href="#guide"]')
+    cs.wait_for_function("document.getElementById('guide-title').getBoundingClientRect().top < innerHeight / 2", timeout=5000)
+    check("Case study: 'How to use the demo' jumps to the guide", cs.url.endswith("#guide"), cs.url)
     shown = cs.evaluate("[...document.querySelectorAll('.cs-figure img')].filter((i) => getComputedStyle(i).display !== 'none').length")
     check("Case study: one chart screenshot shown", shown == 1, f"{shown} shown")
     check("Case study: header name always shown", cs.evaluate("getComputedStyle(document.querySelector('.site-header .brand-link')).visibility") == "visible")
