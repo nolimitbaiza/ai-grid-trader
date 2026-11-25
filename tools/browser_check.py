@@ -239,6 +239,20 @@ def run(pw, label, browser_type, **ctx):
     check("Home page: copy-email button present", about.locator("[data-copy-email]").count() == 1)
     ctas = about.evaluate("[...document.querySelectorAll('.hero-ctas a')].map((a) => a.getAttribute('href'))")
     check("Home page: hero buttons open the demo and the case study", ctas == ["ai-grid-trader", "ai-grid-trader-case-study"], str(ctas))
+    about.locator("#email-link").scroll_into_view_if_needed()
+    about.click("#email-link")
+    menu = about.locator("#mail-menu")
+    hrefs = menu.locator("a").evaluate_all("(as) => as.map((a) => a.href)")
+    check("Home page: Email me opens Gmail / Outlook / mail app / copy",
+          menu.is_visible() and about.get_attribute("#email-link", "aria-expanded") == "true"
+          and len(hrefs) == 3 and "mail.google.com" in hrefs[0] and "outlook.office.com" in hrefs[1]
+          and hrefs[2].startswith("mailto:") and menu.locator("[data-mail-copy]").count() == 1
+          and about.evaluate("document.activeElement.closest('#mail-menu') !== null"), str(hrefs))
+    about.keyboard.press("Escape")
+    check("Home page: Escape closes the email menu and returns focus",
+          menu.is_hidden() and about.evaluate("document.activeElement.id") == "email-link")
+    about.evaluate("document.activeElement.blur(); scrollTo({top: 0, behavior: 'instant'})")
+    about.wait_for_timeout(600)
     check("Home page: degree and graduation year shown", "Computer Science" in words and "May 2027" in words)
     resume = about.evaluate("""async () => {
         const links = [...document.querySelectorAll('a[href*="Baizak-Isaev-Resume.pdf"]')];

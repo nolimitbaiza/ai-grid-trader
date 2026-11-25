@@ -55,6 +55,83 @@
   if (emailButton) { emailButton.href = mailto; emailButton.title = email; }
   if (emailText) { emailText.href = mailto; emailText.textContent = email; }
 
+  // A bare mailto: link does nothing for people with no desktop mail app (most Gmail and
+  // Outlook web users), so "Email me" opens a short menu: Gmail, Outlook, mail app, copy.
+  const triggers = [emailButton, emailText].filter(Boolean);
+  if (triggers.length) {
+    let anchor = triggers[0];
+    const subject = encodeURIComponent("Hello from your website");
+    const to = encodeURIComponent(email);
+    const menu = document.createElement("div");
+    menu.className = "mail-menu";
+    menu.id = "mail-menu";
+    menu.hidden = true;
+    menu.setAttribute("role", "group");
+    menu.setAttribute("aria-label", "Ways to email " + email);
+    const item = (label, href) =>
+      `<a class="mail-menu-item" href="${href}"${href.startsWith("http") ? ' target="_blank" rel="noopener"' : ""}>${label}</a>`;
+    menu.innerHTML =
+      `<p class="mail-menu-to">${email}</p>` +
+      item("Open in Gmail", `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${subject}`) +
+      item("Open in Outlook", `https://outlook.office.com/mail/deeplink/compose?to=${to}&subject=${subject}`) +
+      item("Use my mail app", mailto) +
+      `<button class="mail-menu-item" type="button" data-mail-copy>Copy address</button>`;
+    document.body.append(menu);
+    triggers.forEach((t) => { t.setAttribute("aria-expanded", "false"); t.setAttribute("aria-controls", menu.id); });
+
+    const place = () => {
+      const r = anchor.getBoundingClientRect();
+      const w = menu.offsetWidth, h = menu.offsetHeight;
+      const below = innerHeight - r.bottom >= h + 16 || r.top < h + 16;
+      const left = Math.min(Math.max(16, r.left), innerWidth - w - 16);
+      menu.style.left = `${left + scrollX}px`;
+      menu.style.top = `${(below ? r.bottom + 8 : r.top - h - 8) + scrollY}px`;
+    };
+    const close = (refocus) => {
+      if (menu.hidden) return;
+      menu.hidden = true;
+      anchor.setAttribute("aria-expanded", "false");
+      if (refocus) anchor.focus();
+    };
+    const open = () => {
+      menu.hidden = false;
+      anchor.setAttribute("aria-expanded", "true");
+      place();
+      menu.querySelector(".mail-menu-item").focus({ preventScroll: true });
+    };
+    triggers.forEach((t) => t.addEventListener("click", (e) => {
+      if (e.ctrlKey || e.metaKey || e.shiftKey) return;        // modified clicks keep the plain link
+      e.preventDefault();
+      if (!menu.hidden && anchor === t) { close(true); return; }
+      close(false);
+      anchor = t;
+      open();
+    }));
+    menu.addEventListener("click", async (e) => {
+      const target = e.target.closest(".mail-menu-item");
+      if (!target) return;
+      if (!target.hasAttribute("data-mail-copy")) { setTimeout(() => close(false), 0); return; }
+      try {
+        await navigator.clipboard.writeText(email);
+        target.textContent = "Copied";
+        setTimeout(() => { target.textContent = "Copy address"; close(true); }, 1200);
+      } catch (err) {
+        const range = document.createRange();                  // clipboard blocked: select it instead
+        range.selectNodeContents(menu.querySelector(".mail-menu-to"));
+        getSelection().removeAllRanges();
+        getSelection().addRange(range);
+      }
+    });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(true); });
+    document.addEventListener("pointerdown", (e) => {
+      if (!menu.contains(e.target) && !triggers.some((t) => t.contains(e.target))) close(false);
+    });
+    menu.addEventListener("focusout", (e) => {
+      if (e.relatedTarget && !menu.contains(e.relatedTarget) && !triggers.includes(e.relatedTarget)) close(false);
+    });
+    addEventListener("resize", () => { if (!menu.hidden) place(); });
+  }
+
   const Site = { theme, toggleTheme, email, canReload: () => true };
   window.Site = Site;
 
