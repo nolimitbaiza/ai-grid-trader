@@ -47,8 +47,8 @@
     <div class="container bar">
       <a class="brand-link" href="./" aria-label="Baizak Isaev, home">
         <span class="avatar avatar-xs" aria-hidden="true">
-          <span>BI</span>
-          <img src="assets/img/profile.jpg?v=__BUILD__" alt="" onerror="this.remove()">
+          <span data-initials="BI"></span>
+          <img src="assets/img/profile-64.jpg?v=__BUILD__" srcset="assets/img/profile-64.jpg?v=__BUILD__ 64w, assets/img/profile.jpg?v=__BUILD__ 200w" sizes="28px" width="28" height="28" alt="" onerror="this.remove()">
         </span>
         <span class="brand-name">Baizak Isaev</span>
       </a>
@@ -131,12 +131,14 @@
         <!-- Wide screens: a looping clip of the AI trading (home.js), over a still of its last frame. -->
         <div class="cs-figure-media" data-clip>
           <picture>
+            <source media="(max-width: 640px)" type="image/webp" srcset="assets/img/project-chart-phone.webp?v=__BUILD__" width="1028" height="734">
             <source media="(max-width: 640px)" srcset="assets/img/project-chart-phone.png?v=__BUILD__" width="1028" height="734">
-            <img class="only-light" src="assets/img/chart-replay.jpg?v=__BUILD__" width="1617" height="957" decoding="async" alt="A 48-hour chart of German day-ahead prices with the AI's buy markers in the cheap hours and sell markers at the evening peaks">
+            <img class="only-light" src="assets/img/chart-replay.jpg?v=__BUILD__" width="1617" height="957" loading="lazy" decoding="async" alt="A 48-hour chart of German day-ahead prices with the AI's buy markers in the cheap hours and sell markers at the evening peaks">
           </picture>
           <picture>
+            <source media="(max-width: 640px)" type="image/webp" srcset="assets/img/project-chart-phone-dark.webp?v=__BUILD__" width="1028" height="734">
             <source media="(max-width: 640px)" srcset="assets/img/project-chart-phone-dark.png?v=__BUILD__" width="1028" height="734">
-            <img class="only-dark" src="assets/img/chart-replay-dark.jpg?v=__BUILD__" width="1617" height="957" decoding="async" alt="A 48-hour chart of German day-ahead prices with the AI's buy markers in the cheap hours and sell markers at the evening peaks">
+            <img class="only-dark" src="assets/img/chart-replay-dark.jpg?v=__BUILD__" width="1617" height="957" loading="lazy" decoding="async" alt="A 48-hour chart of German day-ahead prices with the AI's buy markers in the cheap hours and sell markers at the evening peaks">
           </picture>
           <video class="clip-video" muted playsinline loop preload="none" aria-hidden="true" tabindex="-1"
                  data-src-light="assets/video/chart-replay.webm?v=__BUILD__" data-src-dark="assets/video/chart-replay-dark.webm?v=__BUILD__"></video>
@@ -327,7 +329,7 @@
       </section>
 
       <!-- ================================================================ 05 NEXT
-           DRAFT: written from the limitations in docs/methodology.md. Baizak, edit to match your plans. -->
+           Written from the limitations in docs/methodology.md. -->
       <section class="section cs-section" id="next" aria-labelledby="next-title">
         <div class="cs-side" data-reveal>
           <p class="eyebrow-v2"><span class="idx">05</span>What's next</p>

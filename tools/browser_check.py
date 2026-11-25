@@ -274,6 +274,19 @@ def run(pw, label, browser_type, **ctx):
           "€2.54 million" in proof and "plus €3.09 million" in proof and "93–95%" in proof, " ".join(proof.split())[:160])
     check("Home page: AI Grid Trader card lists its stack", "JavaScript · Python" in about.inner_text("#work .project >> nth=0"))
     check("Home page: Now line in About", "summer 2027 internship" in about.inner_text("#about .now"))
+    # Recruiter details: the internship in the hero and contact, the method, Pitwall's numbers, Skills.
+    check("Home page: hero status and contact say internship",
+          "summer 2027 internship" in about.inner_text(".hero .status")
+          and "summer 2027 internship" in about.inner_text("#contact .contact-lede"))
+    check("Home page: AI Grid Trader card names its method", "dynamic programming" in about.inner_text("#work .project >> nth=0"))
+    f1 = about.inner_text("#work .project >> nth=1")
+    check("Home page: Pitwall card has its coverage, finding and stack",
+          "12,700+" in f1 and "33%" in f1 and "PostgreSQL" in f1, " ".join(f1.split())[-200:])
+    skills = about.evaluate("[...document.querySelectorAll('#about .skills-list > div')].map(d => d.querySelector('dt').textContent + ':' + d.querySelectorAll('li').length)")
+    check("Home page: Skills in About, in four groups", len(skills) == 4 and all(not s.endswith(":0") for s in skills), str(skills))
+    webp = about.evaluate("""() => [...document.querySelectorAll('#work .project:nth-of-type(2) picture img')].filter(i => i.currentSrc)
+        .map(i => i.currentSrc.split('/').pop().split('?')[0])""")
+    check("Home page: Pitwall screenshot loads as WebP", webp and all(w.endswith(".webp") for w in webp), str(webp))
     # The demo loop: plays in view where WebM/VP9 plays, otherwise the screenshots stay.
     loop = """() => { const v = document.querySelector('.demo-loop'), m = v.closest('.project-media');
         return {on: m.classList.contains('has-loop'), paused: v.paused, t: v.currentTime, src: v.currentSrc.split('/').pop().split('?')[0],

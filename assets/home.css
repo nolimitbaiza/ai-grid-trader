@@ -407,6 +407,15 @@ body { font-family: var(--font-sans); font-optical-sizing: auto; }
 .fact dt { font: 500 0.6875rem/1.4 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 .fact dd { margin: 6px 0 0; font-weight: 600; line-height: 1.4; }
 .fact dd span { display: block; margin-top: 2px; color: var(--muted); font-size: var(--step--1); font-weight: 500; }
+/* Skills: the résumé's list, grouped, so a recruiter scanning for a keyword finds it on the page. */
+.skills { margin: var(--space-xl) 0 0; }
+.skills-title { margin: 0 0 var(--space-sm); font: 500 0.6875rem/1.4 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.skills-list { display: grid; gap: 10px; margin: 0; }
+.skills-list > div { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr); gap: 12px; align-items: start; }
+.skills-list dt { padding-top: 5px; font-size: var(--step--1); font-weight: 600; }
+.skills-list dd { margin: 0; }
+.skills-list .tags { margin: 0; }
+.skills-list .tags li { color: var(--ink); background: var(--surface); }
 
 /* ---------- Contact ---------- */
 .contact-v2 {
@@ -770,6 +779,9 @@ body { font-family: var(--font-sans); font-optical-sizing: auto; }
 }
 @media (max-width: 480px) {
   .facts { grid-template-columns: 1fr; }
+  .skills-list { gap: 14px; }
+  .skills-list > div { grid-template-columns: 1fr; gap: 6px; }
+  .skills-list dt { padding-top: 0; }
 }
 @media (max-width: 420px) {
   /* Phones: the header can't fit four links, the résumé and the theme button. About is the
