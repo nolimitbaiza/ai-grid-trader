@@ -284,10 +284,10 @@ def run(pw, label, browser_type, **ctx):
           "12,700+" in f1 and "33%" in f1 and "PostgreSQL" in f1, " ".join(f1.split())[-200:])
     skills = about.evaluate("[...document.querySelectorAll('#about .skills-list > div')].map(d => d.querySelector('dt').textContent + ':' + d.querySelectorAll('li').length)")
     check("Home page: Skills in About, in four groups", len(skills) == 4 and all(not s.endswith(":0") for s in skills), str(skills))
-    # The screenshot loads lazily (Firefox leaves currentSrc empty until then): bring it near first.
-    about.evaluate("document.querySelector('#work .project:nth-of-type(2)').scrollIntoView({block: 'center', behavior: 'instant'})")
+    # The screenshot is lazy: Firefox picks its source only once it starts loading, so load it now.
+    about.evaluate("document.querySelectorAll('#work .project:nth-of-type(2) picture img').forEach((i) => { i.loading = 'eager'; })")
     try:
-        about.wait_for_function("[...document.querySelectorAll('#work .project:nth-of-type(2) picture img')].some((i) => i.complete && i.currentSrc)", timeout=8000)
+        about.wait_for_function("[...document.querySelectorAll('#work .project:nth-of-type(2) picture img')].some((i) => i.currentSrc && i.complete)", timeout=8000)
     except Exception:
         pass
     webp = about.evaluate("""() => [...document.querySelectorAll('#work .project:nth-of-type(2) picture img')].filter(i => i.currentSrc)
@@ -374,28 +374,31 @@ def run(pw, label, browser_type, **ctx):
     # every one of them ended up visible before taking the full-page screenshot.
     # Each section is brought into view in turn: a fast sweep can skip past one before headless
     # WebKit on CI has reported it on screen.
-    # A section still hidden after the pass gets another look (up to twice), as a reader scrolling
-    # back would give it: CI's headless WebKit occasionally misses one visibility notification.
     about.evaluate("""async () => {
-        const wait = (ms) => new Promise((r) => setTimeout(r, ms));
         for (const el of document.querySelectorAll('[data-reveal]')) {
             el.scrollIntoView({block: 'center', behavior: 'instant'});
-            await wait(150);
+            await new Promise((r) => setTimeout(r, 150));
         }
-        for (let pass = 0; pass < 2; pass++) {
-            const left = [...document.querySelectorAll('[data-reveal]:not(.is-visible)')];
-            if (!left.length) break;
-            scrollTo({top: 0, behavior: 'instant'}); await wait(300);
-            for (const el of left) { el.scrollIntoView({block: 'center', behavior: 'instant'}); await wait(400); }
-        }
-        scrollTo({top: 0, behavior: 'instant'}); await wait(900);
+        scrollTo({top: 0, behavior: 'instant'}); await new Promise((r) => setTimeout(r, 900));
     }""")
     # Checks that each one was revealed (is-visible), not how far its fade has got: headless WebKit
     # on CI can stall a transition part way.
     try:
         about.wait_for_function("[...document.querySelectorAll('[data-reveal]')].every((e) => e.classList.contains('is-visible'))", timeout=8000)
     except Exception:
-        pass
+        # Headless WebKit on CI can miss a section during the quick sweep: bring any it missed back
+        # into view, more slowly. A section that never reveals still fails below.
+        about.evaluate("""async () => {
+            for (let round = 0; round < 3; round++) {
+                const left = [...document.querySelectorAll('[data-reveal]')].filter((e) => !e.classList.contains('is-visible'));
+                if (!left.length) break;
+                for (const el of left) {
+                    el.scrollIntoView({block: 'center', behavior: 'instant'});
+                    await new Promise((r) => setTimeout(r, 600));
+                }
+            }
+            scrollTo({top: 0, behavior: 'instant'}); await new Promise((r) => setTimeout(r, 300));
+        }""")
     hidden = about.evaluate("""[...document.querySelectorAll('[data-reveal]')].filter((e) => !e.classList.contains('is-visible'))
         .map((e) => (e.closest('[id]') || {}).id + ' ' + e.tagName.toLowerCase() + '.' + [...e.classList].join('.') + ' ' + Math.round(e.getBoundingClientRect().height) + 'px')""")
     check("Home page: every section is visible after scrolling", not hidden, f"{len(hidden)} still hidden: " + "; ".join(hidden))
