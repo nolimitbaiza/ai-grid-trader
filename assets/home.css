@@ -330,6 +330,30 @@ body { font-family: var(--font-sans); font-optical-sizing: auto; }
   transform-origin: 50% 0;
   transition: transform var(--dur-slow) var(--ease-out);
 }
+/* ---------- Case study chart replay (tools/build_demo_video.py). The video sits exactly over the still's
+   picture area (inside the still's padding) and fades in once it is playing; phones keep the still. */
+[data-clip] { position: relative; }
+.clip-video {
+  position: absolute; left: 24px; top: 20px; width: calc(100% - 48px); aspect-ratio: 1617 / 957; height: auto;
+  object-fit: contain; background: var(--surface); pointer-events: none;
+  opacity: 0; transform-origin: 50% 0;
+  transition: opacity 500ms var(--ease-out), transform var(--dur-slow) var(--ease-out);
+}
+[data-clip].is-playing .clip-video { opacity: 1; }
+.clip-toggle {
+  position: absolute; right: 10px; top: 10px; z-index: 2;              /* top right: clear of the chart's axis labels */
+  display: grid; place-items: center; width: 34px; height: 34px; padding: 0;
+  border: 1px solid var(--line); border-radius: 50%; cursor: pointer;
+  background: color-mix(in srgb, var(--surface) 88%, transparent); color: var(--ink);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  opacity: 0.8; transition: opacity var(--dur-fast) linear, border-color var(--dur-fast) linear;
+}
+.clip-toggle[hidden] { display: none; }
+.clip-toggle:hover, .clip-toggle:focus-visible { opacity: 1; border-color: var(--accent); }
+.clip-toggle .i-play, .clip-toggle.is-paused .i-pause { display: none; }
+.clip-toggle.is-paused .i-play { display: block; }
+@media (max-width: 640px) { .clip-video, .clip-toggle { display: none !important; } }
+
 .project-body-v2 {
   display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: var(--space-xl) var(--space-3xl);
   padding: var(--space-xl);
@@ -544,6 +568,88 @@ body { font-family: var(--font-sans); font-optical-sizing: auto; }
 .cs-table--text th, .cs-table--text td { text-align: left; white-space: normal; }
 .cs-table--text tbody th { white-space: nowrap; }
 
+/* Case study: the 30-second summary */
+.cs-tldr {
+  margin: 0 0 var(--space-xl); padding: var(--space-lg) clamp(20px, 3vw, 32px) clamp(20px, 3vw, 28px);
+  border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface-raised);
+  box-shadow: var(--elev-1), var(--highlight);
+}
+.cs-tldr .cs-tldr-title { display: flex; align-items: center; gap: 10px; margin: 0 0 var(--space-lg); color: var(--accent);
+  font: 500 0.75rem/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; }
+.cs-tldr-title::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.cs-tldr-rows { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-md) var(--space-xl); margin: 0; }
+.cs-tldr-rows dt { color: var(--muted); font: 500 0.6875rem/1.4 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; }
+.cs-tldr-rows dd { margin: 4px 0 0; line-height: 1.55; }
+.cs-tldr-rows strong { font-weight: 650; }
+.cs-skills { margin-top: var(--space-lg); padding-top: var(--space-md); border-top: 1px solid var(--line); }
+.cs-skills-label { margin: 0 0 10px; color: var(--muted); font: 500 0.6875rem/1.4 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; }
+.cs-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.cs-tags li { padding: 4px 10px; border: 1px solid var(--line); border-radius: var(--r-pill); background: var(--surface);
+  font-size: var(--step--1); line-height: 1.4; }
+
+/* Case study: "Why I built this" */
+.cs-body .cs-why { margin: 0 0 var(--space-xl); padding: var(--space-md) var(--space-lg); border-left: 3px solid var(--accent);
+  border-radius: 0 var(--r-md) var(--r-md) 0; background: var(--accent-soft); }
+.cs-why p { margin: 0; color: var(--ink); line-height: 1.65; }
+.cs-why .cs-why-title { margin-bottom: 6px; color: var(--accent); font: 500 0.6875rem/1.4 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; }
+
+/* Case study: architecture diagram (HTML, so it reflows on phones) */
+.cs-arch { margin-top: var(--space-md); }
+.cs-body .cs-arch-lane { margin: var(--space-lg) 0 10px; color: var(--muted); font: 500 0.6875rem/1.4 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; }
+.cs-body .cs-arch-lane:first-child { margin-top: 0; }
+.cs-body .cs-arch-flow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 22px; margin: 0; padding: 0; list-style: none; }
+.cs-arch-flow li { position: relative; padding: 12px 12px 14px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); }
+.cs-arch-flow li.is-core { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); background: color-mix(in srgb, var(--accent) 6%, var(--surface)); }
+.cs-arch-flow li + li::before {   /* the arrow from the previous box */
+  content: ""; position: absolute; left: -17px; top: 50%; width: 12px; height: 12px; margin-top: -6px;
+  background: var(--muted);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M1 6h9M6.5 2.5 10 6l-3.5 3.5' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M1 6h9M6.5 2.5 10 6l-3.5 3.5' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.cs-arch-flow b { display: block; font-size: var(--step--1); font-weight: 650; color: var(--ink); }
+.cs-arch-flow span { display: block; margin-top: 4px; color: var(--muted); font-size: 0.8125rem; line-height: 1.45; }
+.cs-arch-flow li.is-core b { color: var(--accent); }
+
+/* Case study: section bar with reading progress. Fixed (not sticky) so it takes no room at the top;
+   hidden with visibility, so it is out of the tab order until it shows. */
+.cs-subnav {
+  position: fixed; top: 68px; left: 0; right: 0; z-index: 49;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  -webkit-backdrop-filter: saturate(1.6) blur(14px); backdrop-filter: saturate(1.6) blur(14px);
+  border-bottom: 1px solid var(--line);
+  transform: translateY(-8px); opacity: 0; visibility: hidden;
+  transition: opacity var(--dur) var(--ease-out), transform var(--dur) var(--ease-out), visibility 0s linear var(--dur);
+}
+.cs-subnav.is-shown { transform: none; opacity: 1; visibility: visible; transition-delay: 0s; }
+.cs-subnav ol { display: flex; gap: 4px; margin: 0; padding: 6px 0; list-style: none; overflow-x: auto; scrollbar-width: none; }
+.cs-subnav ol::-webkit-scrollbar { display: none; }
+.cs-subnav a {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 10px; border-radius: var(--r-pill);
+  color: var(--muted); font-size: var(--step--1); font-weight: 500; white-space: nowrap; text-decoration: none;
+  transition: color var(--dur-fast) linear, background-color var(--dur-fast) linear;
+}
+.cs-subnav a .idx { font: 500 0.6875rem/1 var(--font-mono); color: var(--muted); }
+.cs-subnav a:hover { color: var(--ink); }
+.cs-subnav a[aria-current] { color: var(--ink); background: var(--accent-soft); }
+.cs-subnav a[aria-current] .idx { color: var(--accent); }
+.cs-progress { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; }
+.cs-progress span { display: block; height: 100%; background: var(--accent); transform-origin: 0 50%; transform: scaleX(0); }
+.case-study [id] { scroll-margin-top: 124px; }   /* clear the header and the section bar */
+@media print { .cs-subnav { display: none; } }
+@media (prefers-reduced-motion: reduce) { .cs-subnav { transform: none; } }
+
+@media (max-width: 900px) {
+  .cs-body .cs-arch-flow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cs-arch-flow li:nth-child(3)::before { display: none; }   /* new row: no arrow from the left */
+}
+@media (max-width: 640px) {
+  .cs-tldr-rows { grid-template-columns: minmax(0, 1fr); }
+  .cs-body .cs-arch-flow { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .cs-arch-flow li + li::before, .cs-arch-flow li:nth-child(3)::before {
+    display: block; left: 50%; top: -17px; margin: 0 0 0 -6px; transform: rotate(90deg);
+  }
+}
+
 /* ---------- Posts (battery-wear-cost.html, perfect-hindsight-benchmark.html) ---------- */
 .post-page .cs-hero h1 { max-width: 22ch; }
 .post-page .cs-meta { grid-template-columns: repeat(3, max-content); gap: var(--space-md) var(--space-2xl); }
@@ -625,6 +731,15 @@ body { font-family: var(--font-sans); font-optical-sizing: auto; }
 @keyframes enter      { from { opacity: 0; transform: translate3d(0, 16px, 0); } }
 @keyframes enter-card { from { opacity: 0; transform: translate3d(0, 24px, 0) scale(0.98); } }
 @keyframes underline  { from { background-size: 0% 0.08em; } }
+
+/* ---------- Page transitions: a quick cross-fade between pages of the site (Chrome, Edge, Safari 18.2+;
+   other browsers just navigate). The portfolio header is shared, so it stays put while the page changes. */
+@view-transition { navigation: auto; }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 220ms; animation-timing-function: var(--ease-out); }
+.about-page .site-header { view-transition-name: site-header; }
+@media (prefers-reduced-motion: reduce) {
+  @view-transition { navigation: none; }
+}
 
 /* Printing (or "Save as PDF") never scrolls, so show every section and skip the motion. */
 @media print {

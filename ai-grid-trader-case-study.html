@@ -11,10 +11,10 @@
   <meta property="og:url" content="https://baizakisaev.com/ai-grid-trader-case-study">
   <meta property="og:title" content="AI Grid Trader: case study">
   <meta property="og:description" content="Teaching a grid battery when not to trade. The problem, the approach, the results on real 2025 prices, and what's next.">
-  <meta property="og:image" content="https://baizakisaev.com/assets/og.png">
+  <meta property="og:image" content="https://baizakisaev.com/assets/og-case-study.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="AI Grid Trader: a battery trading chart with buy and sell decisions">
+  <meta property="og:image:alt" content="AI Grid Trader case study: teaching a grid battery when not to trade. €2.54M on a year of German prices, 93–95% of the hindsight maximum, while a rule-based bot lost €0.55M.">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="canonical" href="https://baizakisaev.com/ai-grid-trader-case-study">
   <link rel="manifest" href="manifest.webmanifest">
@@ -28,7 +28,7 @@
     "@type": "Article",
     "headline": "AI Grid Trader: case study",
     "url": "https://baizakisaev.com/ai-grid-trader-case-study",
-    "image": "https://baizakisaev.com/assets/og.png",
+    "image": "https://baizakisaev.com/assets/og-case-study.png",
     "author": { "@type": "Person", "name": "Baizak Isaev", "url": "https://baizakisaev.com/" },
     "about": ["Battery energy storage", "Electricity markets", "Dynamic programming"]
   }
@@ -63,6 +63,21 @@
     </div>
   </header>
 
+  <!-- Section bar with reading progress (home.js shows it after the hero and marks the current section). -->
+  <nav class="cs-subnav" aria-label="Case study sections">
+    <div class="container">
+      <ol>
+        <li><a href="#problem"><span class="idx">01</span>Problem</a></li>
+        <li><a href="#approach"><span class="idx">02</span>Approach</a></li>
+        <li><a href="#results"><span class="idx">03</span>Results</a></li>
+        <li><a href="#engineering"><span class="idx">04</span>Engineering</a></li>
+        <li><a href="#next"><span class="idx">05</span>What's next</a></li>
+        <li><a href="#guide"><span class="idx">06</span>How to use it</a></li>
+      </ol>
+    </div>
+    <div class="cs-progress" aria-hidden="true"><span></span></div>
+  </nav>
+
   <main id="main" class="container">
     <article aria-labelledby="cs-title">
 
@@ -86,22 +101,50 @@
           </a>
           <a class="btn-v2" href="#guide">How to use the demo</a>
         </div>
-        <dl class="cs-meta" data-enter style="--i:4">
-          <div><dt>Role</dt><dd>Solo: modelling, data, front end, testing</dd></div>
-          <div><dt>Stack</dt><dd>JavaScript, Web Workers, Plotly, Python, Docker</dd></div>
-          <div><dt>Data</dt><dd>Real 2025 prices, 15-minute steps</dd></div>
-        </dl>
       </header>
 
+      <!-- The 30-second version, for skimmers. Numbers match the results strip and tables below. -->
+      <section class="cs-tldr" id="summary" aria-labelledby="summary-title" data-reveal>
+        <h2 class="cs-tldr-title" id="summary-title">In 30 seconds</h2>
+        <dl class="cs-tldr-rows">
+          <div><dt>What</dt><dd>An AI agent that decides every 15 minutes whether a 100 MWh grid battery should buy,
+            sell or hold, tested on a full year of real 2025 prices in California, Germany and South Australia.</dd></div>
+          <div><dt>How</dt><dd>A Markov decision process solved exactly with dynamic programming. It re-plans every hour
+            on an imperfect forecast and charges itself for battery wear.</dd></div>
+          <div><dt>Result</dt><dd><strong>93–95%</strong> of the perfect-hindsight maximum in all three markets. In
+            Germany it earned <strong>€2.54M</strong> in a year, where a rule-based bot lost €0.55M.</dd></div>
+          <div><dt>My role</dt><dd>Built alone, end to end: the model, the Python data pipelines, the browser app,
+            automated tests and deployment.</dd></div>
+        </dl>
+        <div class="cs-skills">
+          <p class="cs-skills-label" id="skills-label">Skills shown</p>
+          <ul class="cs-tags" aria-labelledby="skills-label">
+            <li>Dynamic programming</li><li>Markov decision processes</li><li>Optimisation</li>
+            <li>JavaScript</li><li>Web Workers</li><li>Plotly</li><li>Python</li><li>Data pipelines</li>
+            <li>Financial modelling (NPV, IRR)</li><li>Playwright</li><li>GitHub Actions</li><li>Docker</li>
+            <li>Accessibility (WCAG AA)</li><li>Offline web app</li>
+          </ul>
+        </div>
+      </section>
+
       <figure class="cs-figure" data-reveal>
-        <picture>
-          <source media="(max-width: 640px)" srcset="assets/img/project-chart-phone.png?v=__BUILD__" width="1028" height="734">
-          <img class="only-light" src="assets/img/project-chart.png?v=__BUILD__" width="1551" height="839" decoding="async" alt="A 48-hour chart of German day-ahead prices with the AI's buy markers in the cheap hours and sell markers at the evening peaks">
-        </picture>
-        <picture>
-          <source media="(max-width: 640px)" srcset="assets/img/project-chart-phone-dark.png?v=__BUILD__" width="1028" height="734">
-          <img class="only-dark" src="assets/img/project-chart-dark.png?v=__BUILD__" width="1551" height="839" decoding="async" alt="A 48-hour chart of German day-ahead prices with the AI's buy markers in the cheap hours and sell markers at the evening peaks">
-        </picture>
+        <!-- Wide screens: a looping clip of the AI trading (home.js), over a still of its last frame. -->
+        <div class="cs-figure-media" data-clip>
+          <picture>
+            <source media="(max-width: 640px)" srcset="assets/img/project-chart-phone.png?v=__BUILD__" width="1028" height="734">
+            <img class="only-light" src="assets/img/chart-replay.jpg?v=__BUILD__" width="1617" height="957" decoding="async" alt="A 48-hour chart of German day-ahead prices with the AI's buy markers in the cheap hours and sell markers at the evening peaks">
+          </picture>
+          <picture>
+            <source media="(max-width: 640px)" srcset="assets/img/project-chart-phone-dark.png?v=__BUILD__" width="1028" height="734">
+            <img class="only-dark" src="assets/img/chart-replay-dark.jpg?v=__BUILD__" width="1617" height="957" decoding="async" alt="A 48-hour chart of German day-ahead prices with the AI's buy markers in the cheap hours and sell markers at the evening peaks">
+          </picture>
+          <video class="clip-video" muted playsinline loop preload="none" aria-hidden="true" tabindex="-1"
+                 data-src-light="assets/video/chart-replay.webm?v=__BUILD__" data-src-dark="assets/video/chart-replay-dark.webm?v=__BUILD__"></video>
+          <button class="clip-toggle" type="button" hidden aria-label="Pause the animation" title="Pause the animation">
+            <svg class="i-pause" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M5 3.5v9M11 3.5v9" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+            <svg class="i-play" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M5 3.2v9.6L12.6 8z" fill="currentColor"/></svg>
+          </button>
+        </div>
         <figcaption>Two days in Germany, 6–7 November 2025: the agent buys in the cheap hours and sells into the peaks.</figcaption>
       </figure>
 
@@ -128,6 +171,16 @@
           <h2 class="section-title-v2" id="problem-title">Cheap power, expensive cycles.</h2>
         </div>
         <div class="cs-body" data-reveal style="--i:1">
+          <!-- DRAFT: Baizak, rewrite this in your own words. Keep it short and true to you. -->
+          <div class="cs-why">
+            <p class="cs-why-title" id="why-title">Why I built this</p>
+            <p>I'm studying computer science because I want to work on the software side of the energy transition.
+              Batteries kept coming up as the piece that makes solar and wind usable around the clock, but most
+              explanations of how they earn money stopped at "buy low, sell high". I wanted to find out what that
+              really takes: how a battery should decide, what wear really costs, and whether a smart agent beats a
+              simple rule on real prices. Building it end to end, from raw market data to a deployed app, was also
+              the best way I knew to learn the whole stack.</p>
+          </div>
           <p class="lead">Batteries are what let a grid run on more solar and wind. They soak up power when it's
             plentiful and cheap, and give it back at the evening peak. The owner earns the price gap.</p>
           <p>But every charge and discharge wears out the cells, and nobody knows tomorrow's prices for sure.
@@ -245,6 +298,23 @@
           <h2 class="section-title-v2" id="engineering-title">Built to be shown, anywhere.</h2>
         </div>
         <div class="cs-body" data-reveal style="--i:1">
+          <h3 id="arch-title">How it fits together</h3>
+          <div class="cs-arch" role="group" aria-labelledby="arch-title">
+            <p class="cs-arch-lane" id="lane-run">Runs in your browser, no server</p>
+            <ol class="cs-arch-flow" aria-labelledby="lane-run">
+              <li><b>Price data</b><span>Python pipelines turn CAISO, AEMO and Energy-Charts data into one file per market</span></li>
+              <li class="is-core"><b>Planner</b><span>The Markov decision process, solved by dynamic programming</span></li>
+              <li><b>Web Workers</b><span>Run a year's 8,760 hourly re-plans without freezing the page</span></li>
+              <li><b>Interface</b><span>Plotly charts, “Why this trade?”, Present mode, PDF business case</span></li>
+            </ol>
+            <p class="cs-arch-lane" id="lane-ship">Ships on every push</p>
+            <ol class="cs-arch-flow" aria-labelledby="lane-ship">
+              <li><b>GitHub</b><span>Every push to main, plus a monthly job that refreshes the data</span></li>
+              <li><b>Tests</b><span>Model tests, Playwright in three browsers, an accessibility audit, an offline check</span></li>
+              <li><b>Container</b><span>Caddy in Docker on Railway, with build-stamped files</span></li>
+              <li><b>Visitors</b><span>Through Cloudflare; a service worker keeps a copy for offline use</span></li>
+            </ol>
+          </div>
           <dl class="facts cs-facts" data-stagger>
             <div class="fact"><dt>Runs in the browser</dt><dd>No server<span>A full year of simulation runs in Web Workers in a few seconds, so the page never freezes.</span></dd></div>
             <div class="fact"><dt>Works offline</dt><dd>Installable app<span>A service worker keeps a copy, so it opens at a venue with no Wi-Fi.</span></dd></div>
@@ -639,5 +709,7 @@
 
   <script src="assets/site.js?v=__BUILD__"></script>
   <script src="assets/home.js?v=__BUILD__"></script>
+  <!-- Fetch a page as soon as its link is hovered or pressed, so moving around the site feels instant. -->
+  <script type="speculationrules">{"prefetch": [{"where": {"and": [{"href_matches": "/*"}, {"not": {"href_matches": "/assets/*"}}]}, "eagerness": "moderate"}]}</script>
 </body>
 </html>

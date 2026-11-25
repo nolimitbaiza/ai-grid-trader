@@ -10,9 +10,11 @@ The agent buys electricity when it is cheap, sells when it is expensive, and tre
 a real cost. Try it on simulated markets, a full year of real prices from California, Germany and
 South Australia, or your own price file.
 
-**[Open the live demo](https://baizakisaev.com/ai-grid-trader)** · [Read the case study](https://baizakisaev.com/ai-grid-trader-case-study)
+**[Open the live demo](https://baizakisaev.com/ai-grid-trader)**
 
-[![AI Grid Trader: the 48-hour trading view with buy and sell decisions](assets/og.png)](https://baizakisaev.com/ai-grid-trader)
+[![The AI trading two days of German prices: it buys in the cheap hours and sells into the peaks, while its profit and the gain over a rule-based bot count up](docs/demo.gif)](https://baizakisaev.com/ai-grid-trader)
+
+**[Read the case study](https://baizakisaev.com/ai-grid-trader-case-study)**: the problem, the approach, results on a full year of real prices, and a guide to every feature.
 
 The demo runs entirely in the browser, with no sign-up or backend, and works offline after the
 first visit.

@@ -178,6 +178,95 @@
     sync();
   }
 
+
+  // ------------------------------------------------------------------ 5c. Case study section bar
+  // Shows once the hero has scrolled under the header, marks the section being read, and fills a
+  // reading-progress line (one rAF write per frame, transform only).
+  const subnav = document.querySelector(".cs-subnav");
+  const csHero = document.querySelector(".cs-hero");
+  if (subnav && csHero && hasIO) {
+    new IntersectionObserver(([entry]) => {
+      subnav.classList.toggle("is-shown", !entry.isIntersecting && entry.boundingClientRect.top < 0);
+    }, { rootMargin: `-${header ? header.offsetHeight : 0}px 0px 0px 0px` }).observe(csHero);
+
+    const links = [...subnav.querySelectorAll('a[href^="#"]')];
+    const byId = new Map(links.map((a) => [a.hash.slice(1), a]));
+    const mark = (id) => {
+      links.forEach((a) => a.removeAttribute("aria-current"));
+      const a = byId.get(id);
+      if (!a) return;
+      a.setAttribute("aria-current", "true");
+      // Keep the current link in view when the bar scrolls sideways (phones), without moving the page.
+      const bar = a.closest("ol");
+      if (bar.scrollWidth > bar.clientWidth) {
+        bar.scrollTo({ left: a.offsetLeft - (bar.clientWidth - a.offsetWidth) / 2, behavior: reduceMotion.matches ? "auto" : "smooth" });
+      }
+    };
+    const spy = new IntersectionObserver((entries) => {
+      for (const entry of entries) if (entry.isIntersecting) mark(entry.target.id);
+    }, { rootMargin: "-40% 0px -55% 0px" });
+    document.querySelectorAll("main section[id]").forEach((s) => spy.observe(s));
+
+    const bar = subnav.querySelector(".cs-progress span");
+    const article = document.querySelector("main article") || document.querySelector("main");
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const top = article.getBoundingClientRect().top + scrollY;
+      const span = Math.max(1, article.offsetHeight - innerHeight);
+      bar.style.transform = `scaleX(${Math.min(1, Math.max(0, (scrollY - top) / span))})`;
+    };
+    const onScroll = () => { if (!frame) frame = requestAnimationFrame(update); };
+    addEventListener("scroll", onScroll, { passive: true });
+    addEventListener("resize", onScroll, { passive: true });
+    update();
+  }
+
+  // ------------------------------------------------------------------ 5d. Case study chart replay
+  // Wide screens only: the clip loads when its card nears the screen, plays while it is on screen and
+  // follows the theme. With reduced motion it waits for the play button. The still stays underneath,
+  // so nothing changes size, and a browser that can't play the clip just keeps showing the still.
+  const wide = matchMedia("(min-width: 641px)");
+  document.querySelectorAll("[data-clip]").forEach((box) => {
+    const video = box.querySelector("video");
+    const btn = box.querySelector(".clip-toggle");
+    if (!video || !btn || !hasIO || !video.canPlayType || !video.canPlayType('video/webm; codecs="vp9"')) return;
+    let paused = reduceMotion.matches;
+    let near = false;
+    const src = () => video.dataset[window.Site && window.Site.theme() === "dark" ? "srcDark" : "srcLight"];
+    const label = () => {
+      const text = paused ? "Play the animation" : "Pause the animation";
+      btn.setAttribute("aria-label", text);
+      btn.title = text;
+      btn.classList.toggle("is-paused", paused);
+    };
+    const sync = () => {
+      btn.hidden = !wide.matches;
+      if (near && wide.matches && !paused) {
+        if (video.getAttribute("src") !== src()) { box.classList.remove("is-playing"); video.src = src(); }
+        const p = video.play();
+        if (p) p.catch(() => {});        // autoplay refused: the still stays
+      } else if (!video.paused) {
+        video.pause();
+      }
+    };
+    // Shown once frames are actually moving ("playing" alone isn't reliable in every WebKit build).
+    const shown = () => { if (!video.paused && video.currentTime > 0) box.classList.add("is-playing"); };
+    video.addEventListener("playing", shown);
+    video.addEventListener("timeupdate", shown);
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();               // the card behind is a link
+      paused = !paused;
+      label();
+      sync();
+    });
+    new IntersectionObserver(([entry]) => { near = entry.isIntersecting; sync(); }, { rootMargin: "200px 0px" }).observe(box);
+    wide.addEventListener("change", sync);
+    document.addEventListener("site:theme", sync);
+    label();
+  });
+
   // ------------------------------------------------------------------ 6. Copy email + toast
   let toast = document.querySelector(".toast");
   if (!toast) {

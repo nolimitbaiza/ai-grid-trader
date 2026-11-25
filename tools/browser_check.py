@@ -85,7 +85,16 @@ def run(pw, label, browser_type, **ctx):
         check("revenue streams total shown", "Total per year" in page.inner_text("#stack-table"))
         life = page.locator("#life-kpis .value").all_inner_texts()
         check("lifetime figures shown", len(life) == 4 and all(life), " | ".join(life))
-        check("lifetime charts drawn", page.locator("#chart-health .main-svg").count() > 0 and page.locator("#chart-cash .main-svg").count() > 0)
+        # Charts below the fold are drawn when they come near the screen (faster first load).
+        page.locator("#lifetime").scroll_into_view_if_needed()
+        try:
+            page.wait_for_function("document.querySelector('#chart-health .main-svg') && document.querySelector('#chart-cash .main-svg')"
+                                   " && document.querySelector('#chart-cum .main-svg')", timeout=8000)
+        except Exception:
+            pass
+        check("lifetime and profit charts drawn once scrolled to",
+              page.locator("#chart-health .main-svg").count() > 0 and page.locator("#chart-cash .main-svg").count() > 0
+              and page.locator("#chart-cum .main-svg").count() > 0)
         # Dragging a slider end to end must not move it up or down in its card (values such as
         # "none" -> "$40 per kW per year" used to re-wrap the label; text above it changed length).
         moved = page.evaluate("""async () => {
@@ -229,6 +238,9 @@ def run(pw, label, browser_type, **ctx):
           page.get_attribute(".demo-header .nav-case", "href") == "ai-grid-trader-case-study" and page.is_visible(".demo-header .nav-case")
           and page.get_attribute(".intro .case-card", "href") == "ai-grid-trader-case-study" and page.is_visible(".intro .case-card"))
     check("demo: footer links to the how-to guide", page.locator('footer a[href="ai-grid-trader-case-study#guide"]').count() == 1)
+    swatches = page.evaluate("""[...document.querySelectorAll('.chart-head .legend .sw')].map((i) => {
+        const s = getComputedStyle(i); return i.offsetHeight > 0 && (s.backgroundColor !== 'rgba(0, 0, 0, 0)' || parseFloat(s.borderTopWidth) > 0); })""")
+    check("demo: chart legend swatches are visible", len(swatches) == 3 and all(swatches), str(swatches))
     check("demo: the 'Agent sees' switch shows its sliding pill", page.evaluate("document.querySelector('.seg').classList.contains('has-ind')"))
 
     about = context.new_page()
@@ -400,7 +412,48 @@ def run(pw, label, browser_type, **ctx):
     cs.on("pageerror", lambda e: errors.append(str(e)))
     cs.goto(URL + "ai-grid-trader-case-study", wait_until="networkidle")
     sections = cs.evaluate("[...document.querySelectorAll('main section[id]')].map((s) => s.id).join(',')")
-    check("Case study: problem, approach, results, engineering, next, guide", sections == "problem,approach,results,engineering,next,guide,contact", sections)
+    check("Case study: summary, problem, approach, results, engineering, next, guide", sections == "summary,problem,approach,results,engineering,next,guide,contact", sections)
+    summary = cs.evaluate("""() => ({ rows: document.querySelectorAll('#summary .cs-tldr-rows > div').length,
+        tags: document.querySelectorAll('#summary .cs-tags li').length,
+        arch: document.querySelectorAll('#engineering .cs-arch-flow li').length,
+        why: !!document.querySelector('#problem .cs-why'),
+        og: document.querySelector('meta[property="og:image"]').content })""")
+    check("Case study: 30-second summary, skills, architecture and 'Why I built this'",
+          summary["rows"] == 4 and summary["tags"] >= 10 and summary["arch"] == 8 and summary["why"], str(summary))
+    og = cs.evaluate("async (u) => (await fetch(u.replace('https://baizakisaev.com/', ''))).status", summary["og"])
+    check("Case study: its own link-preview image", summary["og"].endswith("og-case-study.png") and og == 200, f"{summary['og']} {og}")
+    bar = cs.evaluate("""async () => {
+        const nav = document.querySelector('.cs-subnav'), atTop = nav.classList.contains('is-shown');
+        document.documentElement.style.scrollBehavior = 'auto';
+        document.getElementById('results').scrollIntoView({ block: 'start' });
+        await new Promise((r) => setTimeout(r, 600));
+        const cur = nav.querySelector('a[aria-current]');
+        const res = { atTop, shown: nav.classList.contains('is-shown'), current: cur && cur.getAttribute('href'),
+                      progress: nav.querySelector('.cs-progress span').style.transform };
+        scrollTo(0, 0); document.documentElement.style.scrollBehavior = '';
+        return res; }""")
+    check("Case study: section bar shows after the hero, marks the section and fills its progress line",
+          not bar["atTop"] and bar["shown"] and bar["current"] == "#results" and bar["progress"] not in ("", "scaleX(0)"), str(bar))
+    if label.startswith("Chromium") and cs.viewport_size["width"] > 640:
+        # The figure's chart replay: plays exactly over its still; its pause button stays on the page.
+        cs.locator(".cs-figure-media[data-clip]").scroll_into_view_if_needed()
+        try:
+            cs.wait_for_function("document.querySelector('.cs-figure-media[data-clip]').classList.contains('is-playing')", timeout=8000)
+        except Exception:
+            pass
+        clip = cs.evaluate("""() => { const b = document.querySelector('.cs-figure-media[data-clip]'), v = b.querySelector('video');
+            const img = [...b.querySelectorAll('img')].find((i) => i.offsetParent), vr = v.getBoundingClientRect(), ir = img.getBoundingClientRect();
+            return { playing: b.classList.contains('is-playing') && !v.paused, src: v.currentSrc.split('/').pop().split('?')[0],
+                     fits: Math.abs(vr.left - ir.left - 24) < 2 && Math.abs(vr.width - (ir.width - 48)) < 2 && Math.abs(vr.top - ir.top - 20) < 2 }; }""")
+        check("Case study: chart replay plays, exactly over its still",
+              clip["playing"] and clip["fits"] and clip["src"].startswith("chart-replay"), str(clip))
+        before = cs.url
+        cs.click(".cs-figure-media .clip-toggle")
+        cs.wait_for_timeout(300)
+        check("Case study: pause button pauses the chart replay",
+              cs.evaluate("document.querySelector('.cs-figure-media video').paused") and cs.url == before
+              and cs.get_attribute(".cs-figure-media .clip-toggle", "aria-label") == "Play the animation")
+        cs.evaluate("scrollTo(0, 0)")
     check("Case study: both results tables", cs.locator("table[aria-labelledby^='t-'] tbody tr").count() == 6)
     guide = cs.evaluate("""() => {
         const links = [...document.querySelectorAll('#guide .cs-toc a')].map((a) => a.getAttribute('href'));

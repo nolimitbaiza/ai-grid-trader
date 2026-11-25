@@ -708,7 +708,7 @@
     if (useBtn) useBtn.onclick = () => { state.wear = Math.min(20000, Math.max(0, Math.round(iw / 50) * 50)); syncControls(); scheduleRender(); toast("Wear price updated: the AI re-plans"); };
 
     $("life-assumptions").textContent = `Assumptions: battery health falls 20% over the cycle life plus ${LIFE.calendarFade * 100}% a year with age; when it drops below ${LIFE.augmentAt * 100}%, new cells restore it to 100% at the cost above, getting ${LIFE.augDecline * 100}% cheaper each year; operation and maintenance ${LIFE.omPct * 100}% of the installed cost a year; trading revenue scales with battery health; ${MARKET_INFO[state.p] ? `default installed cost ${MARKET_INFO[state.p].cost}; ` : ""}${state.itc ? `a ${state.itc}% investment tax credit${MARKET_INFO[state.p] && MARKET_INFO[state.p].itc ? ` (${MARKET_INFO[state.p].itc})` : ""} reduces the upfront cost; no other tax` : "no tax"}, financing or residual value.`;
-    renderLifeCharts(r, ai, bot, palette(), "chart-health", "chart-cash");
+    drawWhenNear("chart-health", () => renderLifeCharts(r, ai, bot, palette(), "chart-health", "chart-cash"));
   }
 
   function renderLifeCharts(r, ai, bot, c, healthEl, cashEl, print) {
@@ -851,6 +851,7 @@
   let state = readState();
   let last = null;
   let clickBound = false;
+  let firstDraw = true;                   // the first chart draw waits a moment (see render)
   let fresh = true;                       // a new scenario (first load, market, mode, day): animate it in
 
   // Motion for a new scenario: the headline numbers rise into place and the chart draws in from
@@ -901,13 +902,20 @@
     last = r;
     const c = palette();
     renderKpis(r, upto);
-    renderMainChart(r, c, upto, "chart-main");
-    if (fresh && upto === N && !kiosk.on) { fresh = false; playScenarioMotion(); }
+    const drawMain = () => {
+      if (last !== r) return;              // a newer render (auto-play, a click) has drawn since
+      renderMainChart(r, palette(), upto, "chart-main");
+      if (fresh && upto === N && !kiosk.on) { fresh = false; playScenarioMotion(); }
+      if (!clickBound && $("chart-main").on) { $("chart-main").on("plotly_click", onChartClick); clickBound = true; }
+    };
+    // On page load the chart is drawn in the next task, so the numbers and text show first and the
+    // page isn't blocked for one long stretch on a phone (Plotly's first draw is its slowest).
+    if (firstDraw) { firstDraw = false; setTimeout(drawMain, 0); } else drawMain();
     describeMainChart(r);
     renderInsight(r);
     $("source").textContent = sourceText(r);
     renderCompare(r, c);
-    renderCumChart(r, c);
+    drawWhenNear("chart-cum", () => renderCumChart(r, palette()));
     $("lg-forecast").hidden = !r.useForecast;
     $("lg-hind").hidden = !r.useForecast;
     updateOutputs();
@@ -917,7 +925,6 @@
     renderStack(r);
     renderLifetime(r);
     hideExplain();
-    if (!clickBound && $("chart-main").on) { $("chart-main").on("plotly_click", onChartClick); clickBound = true; }
     $("solve-time").textContent = `Agent planned ${N} intervals in ${Math.max(1, Math.round(r.ms))} ms`;
     writeState();
     keepInPlace();
@@ -952,6 +959,28 @@
   if ("ResizeObserver" in window) new ResizeObserver(() => keepInPlace()).observe(document.querySelector("main"));
   const letGo = (e) => { if (anchor && !(e.target && e.target.type === "range")) release(); };
   for (const type of ["wheel", "touchmove", "mousedown", "keydown"]) addEventListener(type, letGo, { capture: true, passive: true });
+
+  // Charts below the fold are drawn when they come near the screen, not during the first render:
+  // drawing them up front kept a phone busy for about a quarter of a second before the page responded.
+  // Once a chart has been near the screen it is redrawn on every render, like the rest of the page.
+  const lazyDraws = new Map();            // chart id -> its latest draw, waiting to be near the screen
+  const nearScreen = new Set();
+  const lazyIO = "IntersectionObserver" in window ? new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
+      const id = entry.target.id;
+      nearScreen.add(id);
+      lazyIO.unobserve(entry.target);
+      const draw = lazyDraws.get(id);
+      lazyDraws.delete(id);
+      if (draw) draw();
+    }
+  }, { rootMargin: "600px 0px" }) : null;
+  function drawWhenNear(id, draw) {
+    if (!lazyIO || nearScreen.has(id)) { lazyDraws.delete(id); draw(); return; }
+    if (!lazyDraws.has(id)) lazyIO.observe($(id));
+    lazyDraws.set(id, draw);
+  }
 
   let queued = false;
   function scheduleRender() {

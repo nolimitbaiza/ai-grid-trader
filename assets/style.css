@@ -618,14 +618,15 @@ body.presenting { overflow: hidden; }
 
 .stage-legend { display: flex; flex-wrap: wrap; gap: 6px 22px; margin-bottom: 8px; color: var(--muted); font-size: clamp(0.9rem, 0.8rem + 0.3vw, 1.1rem); }
 .stage-legend span { display: inline-flex; align-items: center; gap: 8px; }
-.sw { display: inline-block; flex: none; width: 22px; height: 0; border-top: 3px solid var(--sw); }
-.sw-dash { border-top-style: dashed; }
-.sw-dot { border-top-style: dotted; }
-.sw-area { height: 12px; border-top-width: 2px; background: color-mix(in srgb, var(--sw) 22%, transparent); }
-.sw-bar { width: 12px; height: 14px; border: 0; background: var(--sw); border-radius: 2px; }
-.sw-up, .sw-down { width: 14px; height: 12px; border: 0; background: var(--sw); }
-.sw-up { clip-path: polygon(50% 0, 100% 100%, 0 100%); }
-.sw-down { clip-path: polygon(0 0, 100% 0, 50% 100%); }
+/* Presenter swatches. Scoped to the stage: the page's own legends use .sw too (top of this file). */
+.stage .sw { display: inline-block; flex: none; width: 22px; height: 0; border-top: 3px solid var(--sw); border-radius: 0; background: none; }
+.stage .sw-dash { border-top-style: dashed; }
+.stage .sw-dot { border-top-style: dotted; }
+.stage .sw-area { height: 12px; border-top-width: 2px; background: color-mix(in srgb, var(--sw) 22%, transparent); }
+.stage .sw-bar { width: 12px; height: 14px; border: 0; background: var(--sw); border-radius: 2px; }
+.stage .sw-up, .stage .sw-down { width: 14px; height: 12px; border: 0; background: var(--sw); }
+.stage .sw-up { clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.stage .sw-down { clip-path: polygon(0 0, 100% 0, 50% 100%); }
 
 .stage-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px 32px; margin-bottom: clamp(8px, 2.5vh, 28px); }
 .stage-kpi .label { color: var(--muted); font-size: clamp(0.85rem, 0.75rem + 0.3vw, 1.05rem); }

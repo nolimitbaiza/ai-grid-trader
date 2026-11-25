@@ -186,5 +186,7 @@
 
   <script src="assets/site.js?v=__BUILD__"></script>
   <script src="assets/home.js?v=__BUILD__"></script>
+  <!-- Fetch a page as soon as its link is hovered or pressed, so moving around the site feels instant. -->
+  <script type="speculationrules">{"prefetch": [{"where": {"and": [{"href_matches": "/*"}, {"not": {"href_matches": "/assets/*"}}]}, "eagerness": "moderate"}]}</script>
 </body>
 </html>

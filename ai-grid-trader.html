@@ -91,13 +91,14 @@
     </section>
 
     <div class="markets" data-enter style="--i:3">
+      <!-- The chips are written here, as well as by app.js, so they take their space before the script runs. -->
       <div class="chips" role="group" aria-label="Simulated markets">
         <span class="chips-label">Simulated</span>
-        <div id="sim-chips" class="chip-row"></div>
+        <div id="sim-chips" class="chip-row"><button type="button" class="chip" data-key="typical">Typical day</button><button type="button" class="chip" data-key="volatile">Volatile</button><button type="button" class="chip" data-key="solar">Solar surplus</button><button type="button" class="chip" data-key="heatwave">Heatwave</button></div>
       </div>
       <div class="chips" role="group" aria-label="Real market prices">
         <span class="chips-label">Real prices</span>
-        <div id="real-chips" class="chip-row"></div>
+        <div id="real-chips" class="chip-row"><button type="button" class="chip" data-key="caiso">California</button><button type="button" class="chip" data-key="de">Germany</button><button type="button" class="chip" data-key="sa">South Australia</button></div>
         <label class="chip chip-upload" title="CSV with a price column, and ideally a timestamp column. It never leaves your browser.">
           <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           Upload CSV
@@ -331,5 +332,7 @@
   <script src="assets/site.js?v=__BUILD__"></script>
   <script src="assets/app.js?v=__BUILD__"></script>
   <script src="assets/home.js?v=__BUILD__"></script>
+  <!-- Fetch a page as soon as its link is hovered or pressed, so moving around the site feels instant. -->
+  <script type="speculationrules">{"prefetch": [{"where": {"and": [{"href_matches": "/*"}, {"not": {"href_matches": "/assets/*"}}]}, "eagerness": "moderate"}]}</script>
 </body>
 </html>

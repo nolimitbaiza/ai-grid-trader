@@ -35,6 +35,8 @@ const ASSETS = [
   "assets/img/profile.jpg" + V,
   "assets/img/project-chart.png" + V,
   "assets/img/project-chart-dark.png" + V,
+  "assets/img/chart-replay.jpg" + V,
+  "assets/img/chart-replay-dark.jpg" + V,
   "assets/img/project-chart-phone.png" + V,
   "assets/img/project-chart-phone-dark.png" + V,
   "assets/img/f1-dashboard.png" + V,
