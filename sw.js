@@ -1,5 +1,5 @@
 /*
- * Offline support for baizakisaev.com (home page and the AI Grid Trader demo).
+ * Offline support for baizakisaev.com (home page, the AI Grid Trader demo and the write-ups).
  * After the first visit every file is cached, so the site opens with no internet connection
  * (handy at venues with bad Wi-Fi). Files are served from the cache instantly and refreshed in
  * the background.
@@ -16,6 +16,8 @@ const ASSETS = [
   "./",                                   // home page (about me)
   "ai-grid-trader",                       // the demo (clean URL for ai-grid-trader.html)
   "ai-grid-trader-case-study",            // the write-up
+  "battery-wear-cost",                    // posts
+  "perfect-hindsight-benchmark",
   "manifest.webmanifest",
   "assets/style.css" + V,
   "assets/site.js" + V,
@@ -33,6 +35,10 @@ const ASSETS = [
   "assets/img/profile.jpg" + V,
   "assets/img/project-chart.png" + V,
   "assets/img/project-chart-dark.png" + V,
+  "assets/img/project-chart-phone.png" + V,
+  "assets/img/project-chart-phone-dark.png" + V,
+  "assets/img/f1-dashboard.png" + V,
+  "assets/img/f1-dashboard-phone.png" + V,
   "assets/Baizak-Isaev-Resume.pdf" + V,
   "assets/vendor/plotly-basic-2.35.2.min.js",
   "assets/img/qr-linkedin.svg",

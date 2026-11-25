@@ -196,7 +196,7 @@ def run(pw, label, browser_type, **ctx):
     shown = about.evaluate(pair)
     check("Home page: light theme shows only the light screenshot", shown == {"light": True, "dark": False}, str(shown))
     about.evaluate("document.documentElement.setAttribute('data-theme', 'dark')")
-    about.locator(".project").scroll_into_view_if_needed()
+    about.locator(".project").first.scroll_into_view_if_needed()
     try:
         about.wait_for_function("(() => { const i = document.querySelector('.project-media img.only-dark'); return i.complete && i.naturalWidth > 0; })()", timeout=10000)
     except Exception:
@@ -206,6 +206,12 @@ def run(pw, label, browser_type, **ctx):
         return [t, getComputedStyle(img).display !== 'none' && img.naturalWidth > 0];
     }))""")
     check("Home page: dark theme shows the dark screenshot", shots == {"light": False, "dark": True}, str(shots))
+    cards = about.evaluate("[...document.querySelectorAll('#work .project-link')].map((a) => a.getAttribute('href'))")
+    check("Home page: AI Grid Trader and Pitwall project cards",
+          len(cards) == 2 and cards[0] == "ai-grid-trader" and "f1_constructor_performance_tracker" in cards[1], str(cards))
+    posts = about.evaluate("""() => Promise.all([...document.querySelectorAll('#writing .post-row')]
+        .map(async (a) => (await fetch(a.href)).status))""")
+    check("Home page: two posts listed, both open", posts == [200, 200], str(posts))
     about.evaluate("document.documentElement.removeAttribute('data-theme')")
     about.click(".project-sub")                    # sits above the card's stretched link
     about.wait_for_load_state("networkidle")
@@ -244,12 +250,48 @@ def run(pw, label, browser_type, **ctx):
     hidden = cs.evaluate("[...document.querySelectorAll('[data-reveal]')].filter((e) => getComputedStyle(e).opacity !== '1').length")
     check("Case study: every section is visible after scrolling", hidden == 0, f"{hidden} still hidden")
     cs.screenshot(path=str(SHOTS / f"{label.replace(' ', '_')}_case_study.png"), full_page=True)
+    for slug, tables in (("battery-wear-cost", 2), ("perfect-hindsight-benchmark", 2)):
+        cs.goto(URL + slug, wait_until="networkidle")
+        check(f"Post {slug}: title, {tables} tables, header name, email link",
+              cs.locator("h1#post-title").count() == 1 and cs.locator(".cs-table").count() == tables
+              and cs.evaluate("getComputedStyle(document.querySelector('.site-header .brand-link')).visibility") == "visible"
+              and (cs.get_attribute("#email-link", "href") or "").startswith("mailto:"))
+        if label.startswith("Chromium"):
+            cs.add_script_tag(url="https://cdn.jsdelivr.net/npm/axe-core@4.10.2/axe.min.js")
+            for theme in ("light", "dark"):
+                cs.evaluate(f"document.documentElement.setAttribute('data-theme', '{theme}')")
+                cs.wait_for_timeout(400)
+                found = cs.evaluate(audit)
+                check(f"Post {slug}: no accessibility violations ({theme} theme)", not found, ", ".join(found))
+            cs.evaluate("document.documentElement.removeAttribute('data-theme')")
+        cs.evaluate("""async () => {
+            for (let y = 0; y <= document.body.scrollHeight + innerHeight; y += innerHeight / 2) {
+                scrollTo({top: y, behavior: 'instant'}); await new Promise((r) => setTimeout(r, 120));
+            }
+        }""")
+        try:
+            cs.wait_for_function("[...document.querySelectorAll('[data-reveal]')].every((e) => getComputedStyle(e).opacity === '1')", timeout=4000)
+        except Exception:
+            pass
+        hidden = cs.evaluate("[...document.querySelectorAll('[data-reveal]')].filter((e) => getComputedStyle(e).opacity !== '1').length")
+        check(f"Post {slug}: every section visible after scrolling", hidden == 0, f"{hidden} still hidden")
+        cs.screenshot(path=str(SHOTS / f"{label.replace(' ', '_')}_{slug}.png"), full_page=True)
     if label.startswith("Chromium"):
-        for page_url in ("", "ai-grid-trader-case-study"):
+        for page_url in ("", "ai-grid-trader-case-study", "battery-wear-cost", "perfect-hindsight-benchmark"):
             cs.set_viewport_size({"width": 360, "height": 760})
             cs.goto(URL + page_url, wait_until="networkidle")
             wide = cs.evaluate("document.documentElement.scrollWidth - innerWidth")
             check(f"phone width: no sideways scroll ({page_url or 'home'})", wide <= 0, f"{wide}px too wide")
+            if page_url == "":
+                cs.evaluate("document.querySelector('#work').scrollIntoView({behavior: 'instant'})")
+                shown = "[...document.querySelectorAll('#work .project-media img')].filter((i) => getComputedStyle(i).display !== 'none')"
+                try:
+                    cs.wait_for_function(f"{shown}.every((i) => i.complete && i.naturalWidth > 0)", timeout=10000)
+                except Exception:
+                    pass
+                files = cs.evaluate(f"{shown}.map((i) => i.currentSrc.split('/').pop().split('?')[0])")
+                check("phone width: project cards use the phone crops",
+                      len(files) == 2 and all("-phone" in f for f in files), str(files))
         cs.screenshot(path=str(SHOTS / "Chromium_phone_case_study.png"), full_page=True)
     cs.close()
 
@@ -295,6 +337,8 @@ def offline(pw):
     check("home page opens with no network", page.locator(".hero").count() == 1)
     page.goto(URL + "ai-grid-trader-case-study", wait_until="load")
     check("case study opens with no network", page.locator("#results").count() == 1)
+    page.goto(URL + "battery-wear-cost", wait_until="load")
+    check("posts open with no network", page.locator("#post-title").count() == 1)
     page.goto(URL + "ai-grid-trader?kiosk=1", wait_until="load")
     page.wait_for_timeout(1500)
     kpis = page.locator("#kpis .value").all_inner_texts()

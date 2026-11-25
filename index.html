@@ -142,13 +142,19 @@
     <section class="section" id="work" aria-labelledby="work-title">
       <div class="section-head" data-reveal>
         <p class="eyebrow-v2"><span class="idx">01</span>Work</p>
-        <h2 class="section-title-v2" id="work-title">Featured project</h2>
+        <h2 class="section-title-v2" id="work-title">Selected projects</h2>
       </div>
 
       <article class="project" data-reveal data-spotlight>
         <div class="project-media">
-          <img class="only-light" src="assets/img/project-chart.png?v=__BUILD__" width="1551" height="839" loading="lazy" decoding="async" alt="AI Grid Trader: a 48-hour trading chart with the AI's buy and sell decisions">
-          <img class="only-dark" src="assets/img/project-chart-dark.png?v=__BUILD__" width="1551" height="839" loading="lazy" decoding="async" alt="AI Grid Trader: a 48-hour trading chart with the AI's buy and sell decisions">
+          <picture>
+            <source media="(max-width: 640px)" srcset="assets/img/project-chart-phone.png?v=__BUILD__" width="1028" height="734">
+            <img class="only-light" src="assets/img/project-chart.png?v=__BUILD__" width="1551" height="839" loading="lazy" decoding="async" alt="AI Grid Trader: a 48-hour trading chart with the AI's buy and sell decisions">
+          </picture>
+          <picture>
+            <source media="(max-width: 640px)" srcset="assets/img/project-chart-phone-dark.png?v=__BUILD__" width="1028" height="734">
+            <img class="only-dark" src="assets/img/project-chart-dark.png?v=__BUILD__" width="1551" height="839" loading="lazy" decoding="async" alt="AI Grid Trader: a 48-hour trading chart with the AI's buy and sell decisions">
+          </picture>
         </div>
         <div class="project-body-v2">
           <div>
@@ -175,13 +181,71 @@
           </dl>
         </div>
       </article>
+
+      <article class="project" data-reveal data-spotlight>
+        <div class="project-media project-media--bleed">
+          <picture>
+            <source media="(max-width: 640px)" srcset="assets/img/f1-dashboard-phone.png?v=__BUILD__" width="1168" height="842">
+            <img src="assets/img/f1-dashboard.png?v=__BUILD__" width="1956" height="1072" loading="lazy" decoding="async" alt="Pitwall dashboard for the 2024 season: championship points, wins and podiums, a points-progression chart and the top-five constructor standings">
+          </picture>
+        </div>
+        <div class="project-body-v2">
+          <div>
+            <ul class="tags" aria-label="Project type">
+              <li>Data pipeline</li>
+              <li>Interactive dashboard</li>
+            </ul>
+            <h3><a class="project-link" href="https://nolimitbaiza.github.io/f1_constructor_performance_tracker/">Pitwall: F1 constructor tracker</a></h3>
+            <p class="project-desc">Every Formula 1 constructors' championship since the first one in 1958, in one dashboard.
+              A Python pipeline loads official results into PostgreSQL, an Express API serves them, and the
+              dashboard compares teams across eras by their share of the points, since a win has been worth
+              anywhere from 8 to 25.</p>
+            <div class="project-links">
+              <span class="project-cta" aria-hidden="true">
+                Open the dashboard
+                <svg class="arrow" viewBox="0 0 16 16" width="16" height="16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <a class="project-sub" href="https://github.com/nolimitbaiza/f1_constructor_performance_tracker" target="_blank" rel="noopener">View the code<span class="sr-only"> on GitHub (opens in a new tab)</span></a>
+            </div>
+          </div>
+          <dl class="project-meta">
+            <div><dt>Coverage</dt><dd>68 seasons · 175 teams · 1958–2025</dd></div>
+            <div><dt>Stack</dt><dd>Python · PostgreSQL · Express · Chart.js</dd></div>
+            <div><dt>Data</dt><dd>Official race results and standings</dd></div>
+          </dl>
+        </div>
+      </article>
+    </section>
+
+    <!-- ================================================================ WRITING -->
+    <section class="section" id="writing" aria-labelledby="writing-title">
+      <div class="section-head" data-reveal>
+        <p class="eyebrow-v2"><span class="idx">02</span>Writing</p>
+        <h2 class="section-title-v2" id="writing-title">Notes from the build</h2>
+      </div>
+      <ul class="posts" data-stagger>
+        <li>
+          <a class="post-row" href="battery-wear-cost">
+            <span class="post-row-meta"><time datetime="2026-11-25">Nov 2026</time> · 5 min read</span>
+            <span class="post-row-title">What battery wear really costs a trading bot</span>
+            <span class="post-row-sum">A full year on real prices, with and without a price on wear: what it changes, and what it doesn't.</span>
+          </a>
+        </li>
+        <li>
+          <a class="post-row" href="perfect-hindsight-benchmark">
+            <span class="post-row-meta"><time datetime="2026-11-25">Nov 2026</time> · 4 min read</span>
+            <span class="post-row-title">Perfect hindsight: the benchmark that keeps a trading bot honest</span>
+            <span class="post-row-sum">Why I score the agent against the best possible result, and how much a worse forecast costs.</span>
+          </a>
+        </li>
+      </ul>
     </section>
 
     <!-- ================================================================ ABOUT -->
     <section class="section" id="about" aria-labelledby="about-title">
       <div class="about-v2">
         <div class="section-head" data-reveal>
-          <p class="eyebrow-v2"><span class="idx">02</span>About me</p>
+          <p class="eyebrow-v2"><span class="idx">03</span>About me</p>
           <h2 class="section-title-v2" id="about-title">Energy, through software.</h2>
         </div>
         <div data-reveal style="--i:1">
@@ -201,7 +265,7 @@
     <!-- ================================================================ CONTACT -->
     <section class="section" id="contact" aria-labelledby="contact-title">
       <div class="contact-v2" data-reveal>
-        <p class="eyebrow-v2"><span class="idx">03</span>Contact</p>
+        <p class="eyebrow-v2"><span class="idx">04</span>Contact</p>
         <h2 id="contact-title">Let's talk energy.</h2>
         <p class="contact-lede">Working on energy storage or renewables? I'm open to projects and collaborations,
           and glad to answer questions about AI Grid Trader.</p>

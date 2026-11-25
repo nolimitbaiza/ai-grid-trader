@@ -92,8 +92,14 @@
       </header>
 
       <figure class="cs-figure" data-reveal>
-        <img class="only-light" src="assets/img/project-chart.png?v=__BUILD__" width="1551" height="839" decoding="async" alt="A 48-hour chart of German day-ahead prices with the AI's buy markers in the cheap hours and sell markers at the evening peaks">
-        <img class="only-dark" src="assets/img/project-chart-dark.png?v=__BUILD__" width="1551" height="839" decoding="async" alt="A 48-hour chart of German day-ahead prices with the AI's buy markers in the cheap hours and sell markers at the evening peaks">
+        <picture>
+          <source media="(max-width: 640px)" srcset="assets/img/project-chart-phone.png?v=__BUILD__" width="1028" height="734">
+          <img class="only-light" src="assets/img/project-chart.png?v=__BUILD__" width="1551" height="839" decoding="async" alt="A 48-hour chart of German day-ahead prices with the AI's buy markers in the cheap hours and sell markers at the evening peaks">
+        </picture>
+        <picture>
+          <source media="(max-width: 640px)" srcset="assets/img/project-chart-phone-dark.png?v=__BUILD__" width="1028" height="734">
+          <img class="only-dark" src="assets/img/project-chart-dark.png?v=__BUILD__" width="1551" height="839" decoding="async" alt="A 48-hour chart of German day-ahead prices with the AI's buy markers in the cheap hours and sell markers at the evening peaks">
+        </picture>
         <figcaption>Two days in Germany, 6–7 November 2025: the agent buys in the cheap hours and sells into the peaks.</figcaption>
       </figure>
 

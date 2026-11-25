@@ -93,6 +93,8 @@ jobs:
           expect 200 /ai-grid-trader      "chart-main"
           expect 200 /ai-grid-trader-case-study "Perfect hindsight"
           expect 200 /assets/Baizak-Isaev-Resume.pdf "%PDF"
+          expect 200 /battery-wear-cost   "Does the agent need to know"
+          expect 200 /perfect-hindsight-benchmark "What a worse forecast costs"
           expect 301 /about.html
           expect 301 /ai-grid-trader.html
           expect 200 /robots.txt          "Sitemap"

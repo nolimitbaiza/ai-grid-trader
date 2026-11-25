@@ -95,9 +95,11 @@ python tools/build_services.py raw --year 2025  # needs: pip install openpyxl
 **Repository layout:**
 
 ```
-index.html                  Home page: about me, the project, contact
+index.html                  Home page: about me, projects, writing, contact
 ai-grid-trader.html         The demo (served at /ai-grid-trader)
 ai-grid-trader-case-study.html  The project write-up (served at /ai-grid-trader-case-study)
+battery-wear-cost.html, perfect-hindsight-benchmark.html  Posts (served without .html; numbers from
+                            tools/writing_numbers.js)
 404.html                    "Page not found" page (self-contained)
 about.html                  Redirect from the old About address to the home page
 assets/site.js              Shared by both pages: light/dark switch, contact email, offline support
@@ -122,7 +124,9 @@ tools/build_markets.py      Rebuilds the real-price data files
 tools/build_services.py     Rebuilds the grid-services price averages
 tools/build_assets.py       Rebuilds the app icons and QR code
 tools/build_og.py           Rebuilds the link-preview image
-tools/build_project_shot.py Rebuilds the home page's project screenshots (light and dark)
+tools/build_project_shot.py Rebuilds the AI Grid Trader screenshots (light and dark, wide and phone)
+tools/build_f1_shot.py     Rebuilds the Pitwall screenshots from its live demo
+tools/writing_numbers.js   Reproduces the numbers quoted in the posts
 tools/serve.py              Local dev server with clean URLs and the "Page not found" page
 tools/browser_check.py      Cross-browser and accessibility checks
 tools/upgrade_check.py      Returning visitors get each new release (no stale cached files)
