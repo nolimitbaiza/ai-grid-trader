@@ -310,6 +310,7 @@ def run(pw, label, browser_type, **ctx):
             about.wait_for_function(f"{brand} === '{want}'", timeout=4000)
         except Exception:
             pass
+    settle("hidden")                                # earlier checks scrolled down and back up
     at_top = about.evaluate(brand)
     about.evaluate("scrollTo({top: 600, behavior: 'instant'})")
     settle("visible")
