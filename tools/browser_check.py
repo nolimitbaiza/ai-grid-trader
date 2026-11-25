@@ -89,10 +89,14 @@ def run(pw, label, browser_type, **ctx):
             return out;
         }""")
         check("sliders stay level while dragged", not moved, "; ".join(moved))
-        try:   # the drags above re-run the full year; let it settle before the checks that follow
-            page.wait_for_function("!document.getElementById('stack').classList.contains('pending')", timeout=120000)
+        # The drags re-run the full year, which dims three cards while it works. Let it finish and the
+        # cards fade back, so the checks that follow (the accessibility audit too) see the settled page.
+        try:
+            page.wait_for_function("""['annual', 'stack', 'lifetime'].every((id) => !document.getElementById(id).classList.contains('pending'))
+                && !document.querySelector('#annual-status .spinner')""", timeout=120000)
         except Exception:
             pass
+        page.wait_for_timeout(600)
 
     page.click("#explain-first")                  # keyboard-friendly route to "Why this trade?"
     page.wait_for_timeout(300)
