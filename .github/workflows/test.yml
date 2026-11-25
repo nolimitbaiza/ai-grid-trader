@@ -107,6 +107,24 @@ jobs:
           if curl -s http://localhost:8080/ | grep -q "__BUILD__"; then echo "FAIL: unfilled build stamp"; exit 1; fi
           curl -sI http://localhost:8080/ | grep -qi "x-content-type-options: nosniff" || { echo "FAIL: security headers missing"; exit 1; }
           echo "ok   build stamps and security headers"
+          # Caching: pages and unstamped files are re-checked; build-stamped files and fonts keep a year.
+          cache() {   # cache <path> <expected Cache-Control>
+            got=$(curl -sI "http://localhost:8080$1" | tr -d '\r' | grep -i "^cache-control:" | cut -d' ' -f2-)
+            if [ "$got" != "$2" ]; then echo "FAIL cache $1: '$got', expected '$2'"; exit 1; fi
+            echo "ok   cache $1 -> $got"
+          }
+          cache "/"                                   "no-cache"
+          cache "/ai-grid-trader-case-study"          "no-cache"
+          cache "/?v=1"                               "no-cache"
+          cache "/sw.js"                              "no-cache"
+          cache "/assets/style.css"                   "no-cache"
+          cache "/assets/style.css?v=1"               "public, max-age=31536000, immutable"
+          cache "/assets/img/project-chart-phone.webp?v=1"  "public, max-age=31536000, immutable"
+          cache "/assets/fonts/inter-latin-var.woff2" "public, max-age=31536000, immutable"
+          cache "/assets/vendor/plotly-basic-2.35.2.min.js" "public, max-age=31536000, immutable"
+          expect 200 /assets/img/project-chart-phone.webp "WEBP"
+          curl -sI http://localhost:8080/assets/img/project-chart-phone.webp | grep -qi "content-type: image/webp" \
+            || { echo "FAIL screenshots are not served as image/webp"; exit 1; }
 
       - name: Server log
         if: always()

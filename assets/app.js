@@ -1355,7 +1355,7 @@
       }
     } else {
       title = `Thank you. I'm ${OWNER.name}.`;
-      sub = "Computer Science student at North American University, focused on renewable energy. I'm open to projects and collaborations, and glad to answer questions about AI Grid Trader.";
+      sub = "Computer Science student at North American University, focused on renewable energy. I'm looking for a summer 2027 internship in energy software, and glad to answer questions about AI Grid Trader.";
       body = `<div class="stage-contact">
           <div class="stage-qr"><img src="assets/img/qr-case-study.svg" alt="QR code for the AI Grid Trader case study" width="200" height="200">
             <b>Read the case study</b><span>baizakisaev.com/ai-grid-trader-case-study</span></div>

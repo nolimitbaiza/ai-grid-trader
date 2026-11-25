@@ -56,8 +56,8 @@
     <div class="container bar">
       <a class="brand-link" href="./" aria-label="Baizak Isaev, home">
         <span class="avatar avatar-xs" aria-hidden="true">
-          <span>BI</span>
-          <img src="assets/img/profile.jpg?v=__BUILD__" alt="" onerror="this.remove()">
+          <span data-initials="BI"></span>
+          <img src="assets/img/profile-64.jpg?v=__BUILD__" srcset="assets/img/profile-64.jpg?v=__BUILD__ 64w, assets/img/profile.jpg?v=__BUILD__ 200w" sizes="28px" width="28" height="28" alt="" onerror="this.remove()">
         </span>
         <span class="brand-name">Baizak Isaev</span>
       </a>
@@ -79,7 +79,7 @@
       <div>
         <div class="hero-id" data-enter style="--i:0">
           <span class="avatar" aria-hidden="true">
-            <span>BI</span>
+            <span data-initials="BI"></span>
             <img src="assets/img/profile.jpg?v=__BUILD__" alt="" width="52" height="52" onerror="this.remove()">
           </span>
           <div>
@@ -110,7 +110,7 @@
 
         <p class="status" data-enter style="--i:4">
           <span class="status-dot" aria-hidden="true"></span>
-          <span>Open to projects and collaborations · <a href="#contact">Get in touch</a></span>
+          <span>Looking for a summer 2027 internship in energy software · <a href="#contact">Get in touch</a></span>
         </p>
       </div>
 
@@ -151,10 +151,12 @@
       <article class="project" data-reveal data-spotlight>
         <div class="project-media">
           <picture>
+            <source media="(max-width: 640px)" type="image/webp" srcset="assets/img/project-chart-phone.webp?v=__BUILD__" width="1028" height="734">
             <source media="(max-width: 640px)" srcset="assets/img/project-chart-phone.png?v=__BUILD__" width="1028" height="734">
             <img class="only-light" src="assets/img/demo-loop.jpg?v=__BUILD__" width="1920" height="1080" loading="lazy" decoding="async" alt="AI Grid Trader in presenter mode: Germany's electricity prices swinging from 75 to 220 euros per MWh over two days, with the AI's forecast">
           </picture>
           <picture>
+            <source media="(max-width: 640px)" type="image/webp" srcset="assets/img/project-chart-phone-dark.webp?v=__BUILD__" width="1028" height="734">
             <source media="(max-width: 640px)" srcset="assets/img/project-chart-phone-dark.png?v=__BUILD__" width="1028" height="734">
             <img class="only-dark" src="assets/img/demo-loop-dark.jpg?v=__BUILD__" width="1920" height="1080" loading="lazy" decoding="async" alt="AI Grid Trader in presenter mode: Germany's electricity prices swinging from 75 to 220 euros per MWh over two days, with the AI's forecast">
           </picture>
@@ -192,6 +194,7 @@
           <dl class="project-meta">
             <div><dt>Markets</dt><dd>California · Germany · South Australia</dd></div>
             <div><dt>Objective</dt><dd>Maximise profit net of battery wear</dd></div>
+            <div><dt>Method</dt><dd>Markov decision process, solved exactly with dynamic programming and re-planned every hour</dd></div>
             <div><dt>Stack</dt><dd>JavaScript · Python · Plotly · Playwright · Docker</dd></div>
           </dl>
         </div>
@@ -200,7 +203,9 @@
       <article class="project" data-reveal data-spotlight>
         <div class="project-media project-media--bleed">
           <picture>
+            <source media="(max-width: 640px)" type="image/webp" srcset="assets/img/f1-dashboard-phone.webp?v=__BUILD__" width="1168" height="842">
             <source media="(max-width: 640px)" srcset="assets/img/f1-dashboard-phone.png?v=__BUILD__" width="1168" height="842">
+            <source type="image/webp" srcset="assets/img/f1-dashboard.webp?v=__BUILD__" width="1956" height="1072">
             <img src="assets/img/f1-dashboard.png?v=__BUILD__" width="1956" height="1072" loading="lazy" decoding="async" alt="Pitwall dashboard for the 2024 season: championship points, wins and podiums, a points-progression chart and the top-five constructor standings">
           </picture>
         </div>
@@ -210,7 +215,7 @@
               <li>Data pipeline</li>
               <li>Interactive dashboard</li>
             </ul>
-            <h3><a class="project-link" href="https://nolimitbaiza.github.io/f1_constructor_performance_tracker/">Pitwall: F1 constructor tracker</a></h3>
+            <h3><a class="project-link" href="https://nolimitbaiza.github.io/f1_constructor_performance_tracker/">Pitwall: F1 Constructor Performance Tracker</a></h3>
             <p class="project-desc">Every Formula 1 constructors' championship since the first one in 1958, in one dashboard.
               A Python pipeline loads official results into PostgreSQL, an Express API serves them, and the
               dashboard compares teams across eras by their share of the points, since a win has been worth
@@ -224,9 +229,9 @@
             </div>
           </div>
           <dl class="project-meta">
-            <div><dt>Coverage</dt><dd>68 seasons · 175 teams · 1958–2025</dd></div>
-            <div><dt>Stack</dt><dd>Python · PostgreSQL · Express · Chart.js</dd></div>
-            <div><dt>Data</dt><dd>Official race results and standings</dd></div>
+            <div><dt>Coverage</dt><dd>12,700+ race results · 175 teams · 68 seasons</dd></div>
+            <div><dt>Finding</dt><dd>Mercedes, 2014–21: 8 straight titles and 33% of all points, against 19.5% for Red Bull</dd></div>
+            <div><dt>Stack</dt><dd>Python · Pandas · DuckDB · PostgreSQL · Express · Chart.js</dd></div>
           </dl>
         </div>
       </article>
@@ -275,6 +280,15 @@
             <div class="fact"><dt>Based in</dt><dd>Houston, TX</dd></div>
             <div class="fact"><dt>Focus</dt><dd>Battery storage &amp; electricity markets</dd></div>
           </dl>
+          <div class="skills">
+            <h3 class="skills-title">Skills</h3>
+            <dl class="skills-list">
+              <div><dt>Languages</dt><dd><ul class="tags"><li>Python</li><li>JavaScript</li><li>SQL</li><li>C++</li><li>Java</li><li>HTML</li><li>CSS</li></ul></dd></div>
+              <div><dt>Frameworks</dt><dd><ul class="tags"><li>React</li><li>Django</li><li>Flask</li><li>Express</li><li>Streamlit</li></ul></dd></div>
+              <div><dt>Data</dt><dd><ul class="tags"><li>Pandas</li><li>NumPy</li><li>DuckDB</li><li>PostgreSQL</li><li>Plotly</li><li>Chart.js</li><li>Matplotlib</li></ul></dd></div>
+              <div><dt>Tools</dt><dd><ul class="tags"><li>Git</li><li>GitHub Actions</li><li>Docker</li><li>Playwright</li><li>PyTest</li><li>Node.js</li></ul></dd></div>
+            </dl>
+          </div>
         </div>
       </div>
     </section>
@@ -284,8 +298,8 @@
       <div class="contact-v2" data-reveal>
         <p class="eyebrow-v2"><span class="idx">04</span>Contact</p>
         <h2 id="contact-title">Let's talk energy.</h2>
-        <p class="contact-lede">Working on energy storage or renewables? I'm open to projects and collaborations,
-          and glad to answer questions about AI Grid Trader.</p>
+        <p class="contact-lede">I'm looking for a summer 2027 internship in energy software: battery storage,
+          electricity markets or renewables. I'm also glad to answer questions about AI Grid Trader.</p>
 
         <div class="email-row">
           <a class="email-big" id="email-text" href="#contact">baizak<span aria-hidden="true"></span>@baizakisaev.com</a>
