@@ -368,8 +368,9 @@ def run(pw, label, browser_type, **ctx):
         about.wait_for_function("[...document.querySelectorAll('[data-reveal]')].every((e) => e.classList.contains('is-visible'))", timeout=8000)
     except Exception:
         pass
-    hidden = about.evaluate("[...document.querySelectorAll('[data-reveal]')].filter((e) => !e.classList.contains('is-visible')).length")
-    check("Home page: every section is visible after scrolling", hidden == 0, f"{hidden} still hidden")
+    hidden = about.evaluate("""[...document.querySelectorAll('[data-reveal]')].filter((e) => !e.classList.contains('is-visible'))
+        .map((e) => (e.closest('[id]') || {}).id + ' ' + e.tagName.toLowerCase() + '.' + [...e.classList].join('.') + ' ' + Math.round(e.getBoundingClientRect().height) + 'px')""")
+    check("Home page: every section is visible after scrolling", not hidden, f"{len(hidden)} still hidden: " + "; ".join(hidden))
     about.screenshot(path=str(SHOTS / f"{label.replace(' ', '_')}_about.png"), full_page=True)
     # The project screenshot has a light and a dark version: exactly one shows in each theme.
     # Where the demo loop plays it covers them, so they're checked as the fallback (loop off).
