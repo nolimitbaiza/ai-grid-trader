@@ -71,7 +71,7 @@
         <li><a href="#approach"><span class="idx">02</span>Approach</a></li>
         <li><a href="#findings"><span class="idx">03</span>Findings</a></li>
         <li><a href="#engineering"><span class="idx">04</span>Engineering</a></li>
-        <li><a href="#team"><span class="idx">05</span>Teamwork</a></li>
+        <li><a href="#team"><span class="idx">05</span>Credits</a></li>
         <li><a href="#next"><span class="idx">06</span>What's next</a></li>
       </ol>
     </div>
@@ -116,16 +116,16 @@
           <div><dt>Result</dt><dd>Ferrari in 2002 and McLaren in 1988 each took <strong>half of all points</strong>, the
             most dominant seasons on record. Mercedes' 8 straight titles were the longest run, but at 33% of the
             points, not the most dominant era.</dd></div>
-          <div><dt>My role</dt><dd>A two-person project. I started it and built the data integration, the staged pipeline
-            and the first dashboard. My teammate built today's Pitwall app on top of it: profiles, comparisons, the
-            Express API and the PostgreSQL importer.</dd></div>
+          <div><dt>My role</dt><dd>My project from the start: the data integration, the staged pipeline, the first
+            dashboard and the FastF1 loader. A collaborator contributed the current app layer (profiles, comparisons,
+            the Express API and the PostgreSQL importer), which I reviewed and merged.</dd></div>
         </dl>
         <div class="cs-skills">
           <p class="cs-skills-label" id="skills-label">Skills shown</p>
           <ul class="cs-tags" aria-labelledby="skills-label">
             <li>Python</li><li>Pandas</li><li>DuckDB</li><li>SQL window functions</li><li>Parquet</li>
             <li>Data validation</li><li>ETL pipelines</li><li>PostgreSQL</li><li>Chart.js</li>
-            <li>Data analysis</li><li>Git and pull requests</li><li>Teamwork</li>
+            <li>Data analysis</li><li>Git and pull requests</li><li>Code review</li>
           </ul>
         </div>
       </section>
@@ -172,6 +172,13 @@
           <h2 class="section-title-v2" id="problem-title">A win isn't worth what it used to be.</h2>
         </div>
         <div class="cs-body" data-reveal style="--i:1">
+          <!-- Baizak's own reason, lightly polished. -->
+          <div class="cs-why">
+            <p class="cs-why-title">Why I built this</p>
+            <p>I'm a Formula 1 fan, and I love learning the history of almost anything. F1 has 75 years of it, recorded
+              race by race, so I wanted to build something that let me explore it: which teams really ruled their era,
+              and how the sport changed around them.</p>
+          </div>
           <p class="lead">Red Bull scored 860 points in 2023. McLaren scored 199 in 1988. On raw points, Red Bull's
             season looks four times as strong, yet both teams won all but one race.</p>
           <p>The rules moved under the numbers. A win was worth 8 points in 1958 and is worth 25 today. Seasons grew
@@ -285,19 +292,19 @@
       <section class="section cs-section" id="engineering" aria-labelledby="engineering-title">
         <div class="cs-side" data-reveal>
           <p class="eyebrow-v2"><span class="idx">04</span>Engineering</p>
-          <h2 class="section-title-v2" id="engineering-title">Two layers, built in turn.</h2>
+          <h2 class="section-title-v2" id="engineering-title">A pipeline first, then an app on top.</h2>
         </div>
         <div class="cs-body" data-reveal style="--i:1">
           <h3 id="arch-title">How it fits together</h3>
           <div class="cs-arch" role="group" aria-labelledby="arch-title">
-            <p class="cs-arch-lane" id="lane-mine">My part: from raw results to the first dashboard</p>
+            <p class="cs-arch-lane" id="lane-mine">My pipeline: from raw results to the first dashboard</p>
             <ol class="cs-arch-flow" aria-labelledby="lane-mine">
               <li><b>Raw tables</b><span>14 CSV tables of results, standings, races and teams, 1950 to 2025</span></li>
               <li class="is-core"><b>Bronze and silver</b><span>Pandas joins, checks and cleans them into Parquet</span></li>
               <li><b>Gold</b><span>DuckDB SQL: monthly points and change per team</span></li>
               <li><b>Monthly dashboard</b><span>Chart.js and Bootstrap, still online as the monthly explorer</span></li>
             </ol>
-            <p class="cs-arch-lane" id="lane-team">My teammate's part: the Pitwall app</p>
+            <p class="cs-arch-lane" id="lane-team">The Pitwall app layer, contributed by a collaborator</p>
             <ol class="cs-arch-flow" aria-labelledby="lane-team">
               <li><b>Importer</b><span>Python: checks keys and counts, then loads in one transaction</span></li>
               <li><b>PostgreSQL</b><span>Teams, seasons, races, results and standings in their own schema</span></li>
@@ -310,17 +317,17 @@
             <div class="fact"><dt>Repeatable</dt><dd>One command<span>python -m src.tracker.pipeline rebuilds everything from the raw tables. After a cleanup, the rebuilt CSV was byte-identical.</span></dd></div>
             <div class="fact"><dt>Columnar</dt><dd>Parquet and DuckDB<span>Each stage hands Parquet to the next, and DuckDB runs SQL straight on the files, no database server needed.</span></dd></div>
             <div class="fact"><dt>Also into PostgreSQL</dt><dd>FastF1 loader<span>An optional loader I wrote pulls race results from 2018 on with FastF1 and writes them to PostgreSQL with SQLAlchemy.</span></dd></div>
-            <div class="fact"><dt>Same numbers everywhere</dt><dd>One statistics module<span>In my teammate's app, the browser and the API share one module, so a total is identical on screen, in the API and in an export.</span></dd></div>
+            <div class="fact"><dt>Same numbers everywhere</dt><dd>One statistics module<span>In the app layer, the browser and the API share one module, so a total is identical on screen, in the API and in an export.</span></dd></div>
             <div class="fact"><dt>Runs without a server</dt><dd>Static demo<span>The live app falls back to a bundled snapshot of the data, so it runs on GitHub Pages with no backend.</span></dd></div>
           </dl>
         </div>
       </section>
 
-      <!-- ================================================================ 05 TEAMWORK
-           From the "Team and contributions" table in the Pitwall README. -->
+      <!-- ================================================================ 05 CREDITS
+           Matches the Pitwall repository's history: the app layer came in one contributed pull request. -->
       <section class="section cs-section" id="team" aria-labelledby="team-title">
         <div class="cs-side" data-reveal>
-          <p class="eyebrow-v2"><span class="idx">05</span>Teamwork</p>
+          <p class="eyebrow-v2"><span class="idx">05</span>Credits</p>
           <h2 class="section-title-v2" id="team-title">Who built what.</h2>
         </div>
         <div class="cs-body" data-reveal style="--i:1">
@@ -332,15 +339,14 @@
                 and a single entry point, and fixed its GitHub Pages site.</dd>
             </div>
             <div>
-              <dt>My teammate</dt>
-              <dd><a href="https://github.com/bekuuu1" target="_blank" rel="noopener">bekuuu1<span class="sr-only"> on GitHub (opens in a new tab)</span></a>
-                built the Pitwall app: constructor profiles, comparisons and insights, the shared statistics module, the
-                Express API, the PostgreSQL importer and the tests.</dd>
+              <dt>Contributed</dt>
+              <dd>A collaborator added the Pitwall app layer in one pull request: constructor profiles, comparisons and
+                insights, the shared statistics module, the Express API, the PostgreSQL importer and its tests.</dd>
             </div>
             <div>
-              <dt>How we worked</dt>
-              <dd>Changes went in on feature branches and were reviewed as pull requests before merging. The original
-                pipeline and dashboard stay in the repository next to the new app.</dd>
+              <dt>Ownership</dt>
+              <dd>I reviewed and merged that work and maintain the project. The original pipeline and dashboard stay in
+                the repository next to the app.</dd>
             </div>
           </dl>
         </div>

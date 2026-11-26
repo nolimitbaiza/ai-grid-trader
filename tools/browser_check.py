@@ -565,10 +565,11 @@ def run(pw, label, browser_type, **ctx):
         arch: document.querySelectorAll('#engineering .cs-arch-flow li').length,
         tables: document.querySelectorAll('#findings .cs-table tbody tr').length,
         team: document.querySelectorAll('#team .cs-features > div').length,
+        why: !!document.querySelector('#problem .cs-why'),
         og: document.querySelector('meta[property="og:image"]').content })""")
     og = cs.evaluate("async (u) => (await fetch(u.replace('https://baizakisaev.com/', ''))).status", info["og"])
-    check("Pitwall case study: summary, skills, two-part architecture, both tables, who built what, its own preview image",
-          info["rows"] == 4 and info["tags"] >= 10 and info["arch"] == 8 and info["tables"] == 10 and info["team"] == 3
+    check("Pitwall case study: summary, 'Why I built this', skills, architecture, both tables, credits, its own preview image",
+          info["rows"] == 4 and info["why"] and info["tags"] >= 10 and info["arch"] == 8 and info["tables"] == 10 and info["team"] == 3
           and info["og"].endswith("og-pitwall.png") and og == 200, f"{info} {og}")
     if label.startswith("Chromium") and cs.viewport_size["width"] > 640:
         cs.locator(".cs-figure-media[data-clip]").scroll_into_view_if_needed()
