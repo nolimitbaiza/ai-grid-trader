@@ -131,13 +131,13 @@
     });
   }
 
-  // ------------------------------------------------------------------ 5b. Demo loop on the project card
-  // A silent loop of presenter mode replaces the screenshots on wider screens. It loads nothing
-  // until the card is near the screen, plays only while visible, follows the theme, and has a
-  // pause button. The screenshots stay until the video is really playing, so phones (the phone
+  // ------------------------------------------------------------------ 5b. Demo loops on the project cards
+  // A silent loop (AI Grid Trader's presenter mode, Pitwall's seasons) replaces the screenshots on
+  // wider screens. It loads nothing until the card is near the screen, plays only while visible,
+  // follows the theme (Pitwall is dark-only: one video for both), and has a pause button. The screenshots stay until the video is really playing, so phones (the phone
   // crop reads better), reduced motion and browsers that can't play WebM/VP9 keep them.
-  const loop = document.querySelector(".demo-loop");
-  if (loop && hasIO) {
+  document.querySelectorAll(".demo-loop").forEach((loop) => {
+    if (!hasIO) return;
     const media = loop.closest(".project-media");
     const toggle = media.querySelector(".loop-toggle");
     const toggleLabel = toggle.querySelector(".sr-only");
@@ -156,8 +156,10 @@
         const at = loop.currentTime || 0;
         theme = want;
         loop.poster = loop.dataset[want + "Poster"];
-        loop.src = loop.dataset[want];
-        if (at) loop.addEventListener("loadedmetadata", () => { loop.currentTime = at; }, { once: true });
+        if (loop.getAttribute("src") !== loop.dataset[want]) {
+          loop.src = loop.dataset[want];
+          if (at) loop.addEventListener("loadedmetadata", () => { loop.currentTime = at; }, { once: true });
+        }
       }
       if (visible && !userPaused) loop.play().catch(() => {});
       else loop.pause();
@@ -178,7 +180,7 @@
     reduceMotion.addEventListener("change", sync);
     document.addEventListener("site:theme", sync);
     sync();
-  }
+  });
 
 
   // ------------------------------------------------------------------ 5c. Case study section bar

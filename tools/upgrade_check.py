@@ -24,8 +24,8 @@ from playwright.sync_api import sync_playwright
 
 PORT = 8611
 # What the Dockerfile publishes, and the files it stamps with the build number.
-PUBLISHED = ["index.html", "ai-grid-trader.html", "ai-grid-trader-case-study.html", "battery-wear-cost.html", "perfect-hindsight-benchmark.html", "about.html", "404.html", "manifest.webmanifest", "sw.js", "assets"]
-STAMPED = ["index.html", "ai-grid-trader.html", "ai-grid-trader-case-study.html", "battery-wear-cost.html", "perfect-hindsight-benchmark.html", "sw.js", "assets/app.js"]
+PUBLISHED = ["index.html", "ai-grid-trader.html", "ai-grid-trader-case-study.html", "pitwall-case-study.html", "battery-wear-cost.html", "perfect-hindsight-benchmark.html", "about.html", "404.html", "manifest.webmanifest", "sw.js", "assets"]
+STAMPED = ["index.html", "ai-grid-trader.html", "ai-grid-trader-case-study.html", "pitwall-case-study.html", "battery-wear-cost.html", "perfect-hindsight-benchmark.html", "sw.js", "assets/app.js"]
 
 parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
 parser.add_argument("repo", nargs="?", type=Path, default=Path(__file__).resolve().parent.parent)

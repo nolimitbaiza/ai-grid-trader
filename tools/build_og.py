@@ -1,8 +1,8 @@
-"""Render the 1200x630 link-preview images: assets/og.png (from the live demo) and
-assets/og-case-study.png (a type-only card with the headline results).
+"""Render the 1200x630 link-preview images: assets/og.png (from the live demo),
+assets/og-case-study.png and assets/og-pitwall.png (type-only cards with each case study's headline numbers).
 
 Usage: serve the repo locally (python tools/serve.py), then
-       python tools/build_og.py [http://localhost:8600/] [demo|case-study|all]
+       python tools/build_og.py [http://localhost:8600/] [demo|case-study|pitwall|all]
 Needs: pip install playwright && python -m playwright install chromium
 """
 import base64
@@ -75,6 +75,20 @@ CASE = """<!doctype html><html><head><meta charset="utf-8"><style>
   <span class="bolt"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M13.5 2 5 14h5.5L9 22l8.5-12H12z" fill="currentColor"/></svg></span>
 </body></html>"""
 
+# Pitwall's card: the same layout, its three findings (keep them in step with pitwall-case-study.html)
+# and Pitwall's dark tile with its red slashes instead of the bolt.
+PITWALL = (CASE.replace("<b>Case study</b> · AI Grid Trader", "<b>Case study</b> · Pitwall")
+           .replace("Teaching a grid battery <span>when not to trade</span>.", "Comparing F1 teams <span>across 68 seasons</span>.")
+           .replace('<div class="stat"><b>€2.54M</b><span>earned on a year of real German prices, after battery wear</span></div>',
+                    '<div class="stat"><b>50%</b><span>of all points went to Ferrari in 2002, the most dominant season</span></div>')
+           .replace('<div class="stat"><b>93–95%</b><span>of the perfect-hindsight maximum, in three markets</span></div>',
+                    '<div class="stat"><b>8</b><span>straight titles for Mercedes, <i style="font-style:normal;white-space:nowrap">2014–21</i>: the longest run</span></div>')
+           .replace('<div class="stat"><b class="neg">−€0.55M</b><span>what a rule-based bot made on the same prices</span></div>',
+                    '<div class="stat"><b>14 pts</b><span>McLaren over Ferrari in 2024, the closest title fight</span></div>')
+           .replace('<svg viewBox="0 0 24 24" width="24" height="24"><path d="M13.5 2 5 14h5.5L9 22l8.5-12H12z" fill="currentColor"/></svg>',
+                    '<svg viewBox="0 0 24 24" width="26" height="26"><path d="M7 19 11 5M12 19 16 5M17 19 21 5" stroke="#ff4655" stroke-width="2.4" stroke-linecap="round"/></svg>'))
+assert PITWALL.count("Pitwall") == 1 and "50%" in PITWALL and "14 pts" in PITWALL and "#ff4655" in PITWALL
+
 b64 = lambda path: base64.b64encode(path.read_bytes()).decode()
 photo = ROOT / "assets" / "img" / "profile.jpg"
 avatar = f'<img src="data:image/jpeg;base64,{b64(photo)}">' if photo.exists() else ""
@@ -91,14 +105,16 @@ with sync_playwright() as pw:
         card.wait_for_timeout(300)
         card.screenshot(path=str(ROOT / "assets" / "og.png"))
         print("wrote assets/og.png")
-    if WHICH in ("case-study", "all"):
-        fonts = ROOT / "assets" / "fonts"
-        html = (CASE.replace("{inter}", b64(fonts / "inter-latin-var.woff2"))
-                    .replace("{mono}", b64(fonts / "jetbrains-mono-latin-500.woff2")).replace("{avatar}", avatar))
+    fonts = ROOT / "assets" / "fonts"
+    for which, template, name in (("case-study", CASE, "og-case-study.png"), ("pitwall", PITWALL, "og-pitwall.png")):
+        if WHICH not in (which, "all"):
+            continue
+        html = (template.replace("{inter}", b64(fonts / "inter-latin-var.woff2"))
+                        .replace("{mono}", b64(fonts / "jetbrains-mono-latin-500.woff2")).replace("{avatar}", avatar))
         card = browser.new_page(viewport={"width": 1200, "height": 630}, device_scale_factor=1)
         card.set_content(html)
         card.evaluate("document.fonts.ready")
         card.wait_for_timeout(300)
-        card.screenshot(path=str(ROOT / "assets" / "og-case-study.png"))
-        print("wrote assets/og-case-study.png")
+        card.screenshot(path=str(ROOT / "assets" / name))
+        print(f"wrote assets/{name}")
     browser.close()

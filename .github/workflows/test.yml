@@ -92,16 +92,20 @@ jobs:
           expect 200 /                    "About me"
           expect 200 /ai-grid-trader      "chart-main"
           expect 200 /ai-grid-trader-case-study "Perfect hindsight"
+          expect 200 /pitwall-case-study  "Who built what"
           expect 200 /assets/Baizak-Isaev-Resume.pdf "%PDF"
           expect 200 /battery-wear-cost   "Does the agent need to know"
           expect 200 /perfect-hindsight-benchmark "What a worse forecast costs"
           expect 200 /assets/video/demo-loop.webm "webm"
+          expect 200 /assets/video/pitwall-loop.webm "webm"
           curl -sI http://localhost:8080/assets/video/demo-loop.webm | grep -qi "content-type: video/webm" \
             || { echo "FAIL demo loop is not served as video/webm"; exit 1; }
           expect 301 /about.html
           expect 301 /ai-grid-trader.html
+          expect 301 /pitwall-case-study.html
           expect 200 /robots.txt          "Sitemap"
           expect 200 /sitemap.xml         "ai-grid-trader"
+          expect 200 /sitemap.xml         "pitwall-case-study"
           expect 404 /no-such-page        "Page not found"
           # Every build stamp was filled in, and the security headers are sent.
           if curl -s http://localhost:8080/ | grep -q "__BUILD__"; then echo "FAIL: unfilled build stamp"; exit 1; fi

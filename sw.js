@@ -1,5 +1,5 @@
 /*
- * Offline support for baizakisaev.com (home page, the AI Grid Trader demo and the write-ups).
+ * Offline support for baizakisaev.com (home page, the AI Grid Trader demo, the case studies and posts).
  * After the first visit every file is cached, so the site opens with no internet connection
  * (handy at venues with bad Wi-Fi). Files are served from the cache instantly and refreshed in
  * the background.
@@ -15,7 +15,8 @@ const V = `?v=${BUILD}`;
 const ASSETS = [
   "./",                                   // home page (about me)
   "ai-grid-trader",                       // the demo (clean URL for ai-grid-trader.html)
-  "ai-grid-trader-case-study",            // the write-up
+  "ai-grid-trader-case-study",            // the write-ups
+  "pitwall-case-study",
   "battery-wear-cost",                    // posts
   "perfect-hindsight-benchmark",
   "manifest.webmanifest",

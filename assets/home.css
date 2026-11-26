@@ -353,6 +353,10 @@ body { font-family: var(--font-sans); font-optical-sizing: auto; }
 .clip-toggle .i-play, .clip-toggle.is-paused .i-pause { display: none; }
 .clip-toggle.is-paused .i-play { display: block; }
 @media (max-width: 640px) { .clip-video, .clip-toggle { display: none !important; } }
+/* Pitwall's figure (dark-only dashboard): still and clip edge to edge on its own dark background. */
+.cs-figure--bleed .cs-figure-media { background: #111214; }
+.cs-figure.cs-figure--bleed img { padding: 0; }
+.cs-figure--bleed .clip-video { left: 0; top: 0; width: 100%; aspect-ratio: 1956 / 1396; background: #111214; }
 
 .project-body-v2 {
   display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: var(--space-xl) var(--space-3xl);
@@ -457,7 +461,7 @@ body { font-family: var(--font-sans); font-optical-sizing: auto; }
 /* Until it plays, the video sits unseen (still rendered, so every browser decodes it). */
 .project-media .demo-loop { position: absolute; left: 0; top: 0; width: 2px; height: 2px; opacity: 0; pointer-events: none; }
 .project-media.has-loop .demo-loop {
-  position: static; display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; opacity: 1; background: var(--bg);
+  position: static; display: block; width: 100%; height: auto; aspect-ratio: var(--loop-ratio, 16 / 9); opacity: 1; background: var(--bg);
 }
 .about-page .project-media.has-loop picture img { display: none !important; }
 /* The wide still is the loop's first frame, edge to edge like the video. */

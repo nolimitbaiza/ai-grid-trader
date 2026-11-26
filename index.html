@@ -205,15 +205,27 @@
           <picture>
             <source media="(max-width: 640px)" type="image/webp" srcset="assets/img/f1-dashboard-phone.webp?v=__BUILD__" width="1168" height="842">
             <source media="(max-width: 640px)" srcset="assets/img/f1-dashboard-phone.png?v=__BUILD__" width="1168" height="842">
-            <source type="image/webp" srcset="assets/img/f1-dashboard.webp?v=__BUILD__" width="1956" height="1072">
-            <img src="assets/img/f1-dashboard.png?v=__BUILD__" width="1956" height="1072" loading="lazy" decoding="async" alt="Pitwall dashboard for the 2024 season: championship points, wins and podiums, a points-progression chart and the top-five constructor standings">
+            <source type="image/webp" srcset="assets/img/f1-dashboard.webp?v=__BUILD__" width="1956" height="1396">
+            <img src="assets/img/f1-dashboard.png?v=__BUILD__" width="1956" height="1396" loading="lazy" decoding="async" alt="Pitwall dashboard for the 2024 season: championship points, wins and podiums, a points-progression chart and the top-five constructor standings">
           </picture>
+          <!-- Silent loop through five seasons (tools/build_f1_shot.py); the still above is its first frame.
+               Pitwall is dark-only, so both themes get the same video. -->
+          <video class="demo-loop" muted loop playsinline preload="none" width="1956" height="1396" style="--loop-ratio: 1956 / 1396"
+            data-light="assets/video/pitwall-loop.webm?v=__BUILD__" data-light-poster="assets/img/f1-dashboard.png?v=__BUILD__"
+            data-dark="assets/video/pitwall-loop.webm?v=__BUILD__" data-dark-poster="assets/img/f1-dashboard.png?v=__BUILD__"
+            aria-label="Pitwall's overview stepping through the 2024, 1988, 2002, 2016 and 2023 seasons"></video>
+          <button class="loop-toggle" type="button" aria-pressed="false" hidden>
+            <svg class="i-pause" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M5 3.5v9M11 3.5v9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <svg class="i-play" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M5 3.2v9.6L12.5 8z" fill="currentColor"/></svg>
+            <span class="sr-only">Pause the demo video</span>
+          </button>
         </div>
         <div class="project-body-v2">
           <div>
             <ul class="tags" aria-label="Project type">
               <li>Data pipeline</li>
               <li>Interactive dashboard</li>
+              <li>Team project</li>
             </ul>
             <h3><a class="project-link" href="https://nolimitbaiza.github.io/f1_constructor_performance_tracker/">Pitwall: F1 Constructor Performance Tracker</a></h3>
             <p class="project-desc">Every Formula 1 constructors' championship since the first one in 1958, in one dashboard.
@@ -225,7 +237,7 @@
                 Open the dashboard
                 <svg class="arrow" viewBox="0 0 16 16" width="16" height="16"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </span>
-              <a class="project-sub" href="https://github.com/nolimitbaiza/f1_constructor_performance_tracker" target="_blank" rel="noopener">View the code<span class="sr-only"> on GitHub (opens in a new tab)</span></a>
+              <a class="project-sub" href="pitwall-case-study">Read the case study</a>
             </div>
           </div>
           <dl class="project-meta">

@@ -98,6 +98,7 @@ python tools/build_services.py raw --year 2025  # needs: pip install openpyxl
 index.html                  Home page: about me, projects, writing, contact
 ai-grid-trader.html         The demo (served at /ai-grid-trader)
 ai-grid-trader-case-study.html  The project write-up (served at /ai-grid-trader-case-study)
+pitwall-case-study.html     The Pitwall write-up (served at /pitwall-case-study)
 battery-wear-cost.html, perfect-hindsight-benchmark.html  Posts (served without .html; numbers from
                             tools/writing_numbers.js)
 404.html                    "Page not found" page (self-contained)
@@ -116,20 +117,20 @@ assets/data/services.js     Yearly grid-services price averages (the defaults)
 assets/vendor/              Plotly.js (bundled for offline use)
 assets/img/                 Profile photo, project screenshots (light and dark), LinkedIn QR code
 assets/icons/, manifest.webmanifest, sw.js   Installable app + offline cache
-assets/og.png, og-case-study.png  Link-preview images (demo and home; case study)
+assets/og.png, og-case-study.png, og-pitwall.png  Link-preview images (demo and home; the two case studies)
 robots.txt, sitemap.xml     For search engines
 Dockerfile, Caddyfile       Hosting on Railway
 tools/fetch_data.py         Downloads a year of public market data
 tools/build_markets.py      Rebuilds the real-price data files
 tools/build_services.py     Rebuilds the grid-services price averages
 tools/build_assets.py       Rebuilds the app icons and QR code
-tools/build_og.py           Rebuilds the demo's link-preview image (assets/og.png) and the case study's (assets/og-case-study.png)
+tools/build_og.py           Rebuilds the demo's link-preview image (assets/og.png) and the case studies' (og-case-study.png, og-pitwall.png)
 tools/build_og_card.py      Rebuilds the home page and posts' preview card (assets/og-card.png)
 tools/build_demo_loop.py    Records the demo loop on the home page's project card (assets/video/)
 tools/build_project_shot.py Rebuilds the AI Grid Trader phone stills (light and dark)
 tools/build_demo_video.py   Records the case study's chart replay clip, its stills and the README GIF
 tools/build_webp.py         WebP copies of the phone stills and Pitwall screenshots, and the small header photo
-tools/build_f1_shot.py     Rebuilds the Pitwall screenshots from its live demo
+tools/build_f1_shot.py     Records the Pitwall loop and rebuilds its stills from its live demo
 tools/writing_numbers.js   Reproduces the numbers quoted in the posts
 tools/serve.py              Local dev server with clean URLs and the "Page not found" page
 tools/browser_check.py      Cross-browser and accessibility checks

@@ -303,6 +303,8 @@ def run(pw, label, browser_type, **ctx):
         about.wait_for_timeout(800)
         st = about.evaluate(loop)
         check("Home page: card keeps its screenshot where the video can't play", not st["on"] and st["shots"] == 1 and not st["button"], str(st))
+        check("Home page: Pitwall card keeps its screenshot too",
+              not about.evaluate("document.querySelector('#work .project:nth-of-type(2) .project-media').classList.contains('has-loop')"))
     else:
         try:
             about.wait_for_function("document.querySelector('.project-media').classList.contains('has-loop')", timeout=10000)
@@ -323,7 +325,20 @@ def run(pw, label, browser_type, **ctx):
         about.wait_for_timeout(500)
         check("Home page: demo loop pauses when scrolled away", about.evaluate(loop)["paused"])
         check("Home page: the wide still is the loop's first frame (no visible swap)",
-              about.evaluate("[...document.querySelectorAll('.project-media:has(.demo-loop) picture img')].every((i) => /demo-loop(-dark)?\.jpg/.test(i.src))"))
+              about.evaluate("[...document.querySelectorAll('#work .project:nth-of-type(1) .project-media picture img')].every((i) => /demo-loop(-dark)?\.jpg/.test(i.src))"))
+        # Pitwall's card has its own loop through five seasons: one video for both themes.
+        about.evaluate("document.querySelector('#work .project:nth-of-type(2) .project-media').scrollIntoView({block: 'center', behavior: 'instant'})")
+        try:
+            about.wait_for_function("document.querySelector('#work .project:nth-of-type(2) .project-media').classList.contains('has-loop')", timeout=10000)
+        except Exception:
+            pass
+        about.wait_for_timeout(600)
+        pit = about.evaluate("""() => { const m = document.querySelector('#work .project:nth-of-type(2) .project-media'), v = m.querySelector('.demo-loop');
+            return {on: m.classList.contains('has-loop'), paused: v.paused, t: v.currentTime, src: v.currentSrc.split('/').pop().split('?')[0],
+                    button: !m.querySelector('.loop-toggle').hidden, ratio: +(v.offsetWidth / v.offsetHeight).toFixed(2)}; }""")
+        check("Home page: Pitwall loop plays in view, at its own shape",
+              pit["on"] and not pit["paused"] and pit["t"] > 0 and pit["button"] and pit["src"] == "pitwall-loop.webm"
+              and abs(pit["ratio"] - 1956 / 1396) < 0.02, str(pit))
     about.evaluate("document.activeElement.blur(); scrollTo({top: 0, behavior: 'instant'})")
     about.wait_for_timeout(600)
     check("Home page: degree and graduation year shown", "Computer Science" in words and "May 2027" in words)
@@ -437,6 +452,8 @@ def run(pw, label, browser_type, **ctx):
         }))""")
         check("Home page: dark theme shows the dark screenshot", shots == {"light": False, "dark": True}, str(shots))
     cards = about.evaluate("[...document.querySelectorAll('#work .project-link')].map((a) => a.getAttribute('href'))")
+    subs = about.evaluate("[...document.querySelectorAll('#work .project-sub')].map((a) => a.getAttribute('href'))")
+    check("Home page: both cards link to their case studies", subs == ["ai-grid-trader-case-study", "pitwall-case-study"], str(subs))
     check("Home page: AI Grid Trader and Pitwall project cards",
           len(cards) == 2 and cards[0] == "ai-grid-trader" and "f1_constructor_performance_tracker" in cards[1], str(cards))
     posts = about.evaluate("""() => Promise.all([...document.querySelectorAll('#writing .post-row')]
@@ -537,6 +554,57 @@ def run(pw, label, browser_type, **ctx):
         .map((e) => e.className)""")
     check("Case study: every section is visible after scrolling", not hidden, "; ".join(hidden))
     cs.screenshot(path=str(SHOTS / f"{label.replace(' ', '_')}_case_study.png"), full_page=True)
+
+    # The Pitwall case study: the same design, its own sections, preview image and loop.
+    cs.goto(URL + "pitwall-case-study", wait_until="networkidle")
+    sections = cs.evaluate("[...document.querySelectorAll('main section[id]')].map((s) => s.id).join(',')")
+    check("Pitwall case study: summary, problem, approach, findings, engineering, team, next",
+          sections == "summary,problem,approach,findings,engineering,team,next,contact", sections)
+    info = cs.evaluate("""() => ({ rows: document.querySelectorAll('#summary .cs-tldr-rows > div').length,
+        tags: document.querySelectorAll('#summary .cs-tags li').length,
+        arch: document.querySelectorAll('#engineering .cs-arch-flow li').length,
+        tables: document.querySelectorAll('#findings .cs-table tbody tr').length,
+        team: document.querySelectorAll('#team .cs-features > div').length,
+        og: document.querySelector('meta[property="og:image"]').content })""")
+    og = cs.evaluate("async (u) => (await fetch(u.replace('https://baizakisaev.com/', ''))).status", info["og"])
+    check("Pitwall case study: summary, skills, two-part architecture, both tables, who built what, its own preview image",
+          info["rows"] == 4 and info["tags"] >= 10 and info["arch"] == 8 and info["tables"] == 10 and info["team"] == 3
+          and info["og"].endswith("og-pitwall.png") and og == 200, f"{info} {og}")
+    if label.startswith("Chromium") and cs.viewport_size["width"] > 640:
+        cs.locator(".cs-figure-media[data-clip]").scroll_into_view_if_needed()
+        try:
+            cs.wait_for_function("document.querySelector('.cs-figure-media[data-clip]').classList.contains('is-playing')", timeout=8000)
+        except Exception:
+            pass
+        clip = cs.evaluate("""() => { const b = document.querySelector('.cs-figure-media[data-clip]'), v = b.querySelector('video');
+            const img = [...b.querySelectorAll('img')].find((i) => i.offsetParent), vr = v.getBoundingClientRect(), ir = img.getBoundingClientRect();
+            return { playing: b.classList.contains('is-playing') && !v.paused, src: v.currentSrc.split('/').pop().split('?')[0],
+                     fits: Math.abs(vr.left - ir.left) < 2 && Math.abs(vr.width - ir.width) < 2 && Math.abs(vr.top - ir.top) < 2
+                           && Math.abs(vr.height - ir.height) < 3 }; }""")
+        check("Pitwall case study: season loop plays, exactly over its still", clip["playing"] and clip["fits"] and clip["src"] == "pitwall-loop.webm", str(clip))
+        cs.evaluate("scrollTo(0, 0)")
+    if label.startswith("Chromium"):
+        for theme in ("light", "dark"):
+            cs.add_script_tag(url="https://cdn.jsdelivr.net/npm/axe-core@4.10.2/axe.min.js")
+            cs.evaluate(f"document.documentElement.setAttribute('data-theme', '{theme}')")
+            cs.wait_for_timeout(400)
+            found = cs.evaluate(audit)
+            check(f"Pitwall case study: no accessibility violations ({theme} theme)", not found, ", ".join(found))
+        cs.evaluate("document.documentElement.removeAttribute('data-theme')")
+    cs.evaluate("""async () => {
+        for (const el of document.querySelectorAll('[data-reveal]')) {
+            el.scrollIntoView({block: 'center', behavior: 'instant'});
+            await new Promise((r) => setTimeout(r, 150));
+        }
+        scrollTo({top: 0, behavior: 'instant'}); await new Promise((r) => setTimeout(r, 900));
+    }""")
+    try:
+        cs.wait_for_function("[...document.querySelectorAll('[data-reveal]')].every((e) => e.classList.contains('is-visible'))", timeout=8000)
+    except Exception:
+        pass
+    hidden = cs.evaluate("[...document.querySelectorAll('[data-reveal]')].filter((e) => !e.classList.contains('is-visible')).map((e) => e.className)")
+    check("Pitwall case study: every section is visible after scrolling", not hidden, "; ".join(hidden))
+    cs.screenshot(path=str(SHOTS / f"{label.replace(' ', '_')}_pitwall_case_study.png"), full_page=True)
     for slug, tables in (("battery-wear-cost", 2), ("perfect-hindsight-benchmark", 2)):
         cs.goto(URL + slug, wait_until="networkidle")
         check(f"Post {slug}: title, {tables} tables, header name, email link",
@@ -569,7 +637,7 @@ def run(pw, label, browser_type, **ctx):
         check(f"Post {slug}: every section revealed after scrolling", not hidden, "; ".join(hidden))
         cs.screenshot(path=str(SHOTS / f"{label.replace(' ', '_')}_{slug}.png"), full_page=True)
     if label.startswith("Chromium"):
-        for page_url in ("", "ai-grid-trader-case-study", "battery-wear-cost", "perfect-hindsight-benchmark"):
+        for page_url in ("", "ai-grid-trader-case-study", "pitwall-case-study", "battery-wear-cost", "perfect-hindsight-benchmark"):
             cs.set_viewport_size({"width": 360, "height": 760})
             cs.goto(URL + page_url, wait_until="networkidle")
             wide = cs.evaluate("document.documentElement.scrollWidth - innerWidth")
@@ -584,9 +652,9 @@ def run(pw, label, browser_type, **ctx):
                 files = cs.evaluate(f"{shown}.map((i) => i.currentSrc.split('/').pop().split('?')[0])")
                 check("phone width: project cards use the phone crops",
                       len(files) == 2 and all("-phone" in f for f in files), str(files))
-                check("phone width: no demo loop (the phone crop reads better)",
-                      not cs.evaluate("document.querySelector('.project-media').classList.contains('has-loop')")
-                      and cs.evaluate("document.querySelector('.demo-loop').networkState") != 2)
+                check("phone width: no demo loops (the phone crops read better)",
+                      not cs.evaluate("[...document.querySelectorAll('.project-media')].some((m) => m.classList.contains('has-loop'))")
+                      and cs.evaluate("[...document.querySelectorAll('.demo-loop')].every((v) => v.networkState !== 2)"))
         cs.screenshot(path=str(SHOTS / "Chromium_phone_case_study.png"), full_page=True)
     cs.close()
 
@@ -647,6 +715,8 @@ def offline(pw):
     check("home page opens with no network", page.locator(".hero").count() == 1)
     page.goto(URL + "ai-grid-trader-case-study", wait_until="load")
     check("case study opens with no network", page.locator("#results").count() == 1)
+    page.goto(URL + "pitwall-case-study", wait_until="load")
+    check("Pitwall case study opens with no network", page.locator("#findings").count() == 1)
     page.goto(URL + "battery-wear-cost", wait_until="load")
     check("posts open with no network", page.locator("#post-title").count() == 1)
     page.goto(URL + "ai-grid-trader?kiosk=1", wait_until="load")
