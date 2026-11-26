@@ -30,7 +30,7 @@ from PIL import Image
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parent.parent
-URL = sys.argv[1] if len(sys.argv) > 1 else "https://nolimitbaiza.github.io/f1_constructor_performance_tracker/"
+URL = sys.argv[1] if len(sys.argv) > 1 else "https://baizakisaev.com/pitwall/"
 SEASONS = ["2024", "1988", "2002", "2016", "2023"]   # the default season first, so the still is frame one
 FPS = 20
 HOLD = 2.8                                            # seconds on each season

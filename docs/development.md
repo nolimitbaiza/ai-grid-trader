@@ -25,6 +25,13 @@ The site is static: plain HTML, CSS and JavaScript with no build step.
   Deploy with the [Railway CLI](https://docs.railway.com/guides/cli) by running `railway up` in the
   repo folder. To redeploy automatically on every push, including the monthly data refresh,
   connect this GitHub repo to the service in Railway (*service → Settings → Source*).
+- **[/pitwall/](https://baizakisaev.com/pitwall/)** serves the Pitwall dashboard from `pitwall/`.
+  Pitwall has its own repository
+  ([f1_constructor_performance_tracker](https://github.com/nolimitbaiza/f1_constructor_performance_tracker)),
+  which loads new race results after every race weekend. The *Sync Pitwall* workflow
+  (`.github/workflows/sync-pitwall.yml`) copies its app into `pitwall/` every day with
+  `tools/sync_pitwall.py`; a change is committed, and the push redeploys the site. Run
+  `python tools/sync_pitwall.py <path to a Pitwall checkout>` to do the same by hand.
 - A mirror on GitHub Pages also updates on every push to `main`.
 
 **Embedding it on another website:** `?embed=1` hides the page header, intro and footer so only the

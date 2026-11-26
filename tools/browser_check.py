@@ -455,7 +455,7 @@ def run(pw, label, browser_type, **ctx):
     subs = about.evaluate("[...document.querySelectorAll('#work .project-sub')].map((a) => a.getAttribute('href'))")
     check("Home page: both cards link to their case studies", subs == ["ai-grid-trader-case-study", "pitwall-case-study"], str(subs))
     check("Home page: AI Grid Trader and Pitwall project cards",
-          len(cards) == 2 and cards[0] == "ai-grid-trader" and "f1_constructor_performance_tracker" in cards[1], str(cards))
+          len(cards) == 2 and cards[0] == "ai-grid-trader" and cards[1] == "pitwall/", str(cards))
     posts = about.evaluate("""() => Promise.all([...document.querySelectorAll('#writing .post-row')]
         .map(async (a) => (await fetch(a.href)).status))""")
     check("Home page: two posts listed, both open", posts == [200, 200], str(posts))

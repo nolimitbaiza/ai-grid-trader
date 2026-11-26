@@ -3,6 +3,7 @@
 #   /ai-grid-trader   the AI Grid Trader demo (ai-grid-trader.html)
 #   /ai-grid-trader-case-study   the project write-up
 #   /pitwall-case-study          the Pitwall write-up
+#   /pitwall/                    the Pitwall dashboard (pitwall/, synced from its own repository)
 #   /battery-wear-cost, /perfect-hindsight-benchmark   posts (Writing on the home page)
 :{$PORT:8080} {
 	root * /srv
@@ -14,6 +15,8 @@
 	redir /ai-grid-trader/ /ai-grid-trader{query} permanent
 	redir /ai-grid-trader-case-study.html /ai-grid-trader-case-study permanent
 	redir /pitwall-case-study.html /pitwall-case-study permanent
+	# Pitwall loads its files by relative address, so it needs the trailing slash.
+	redir /pitwall /pitwall/ permanent
 	redir /battery-wear-cost.html /battery-wear-cost permanent
 	redir /perfect-hindsight-benchmark.html /perfect-hindsight-benchmark permanent
 

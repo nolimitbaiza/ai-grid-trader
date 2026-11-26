@@ -4,6 +4,8 @@ FROM caddy:2.8-alpine
 COPY Caddyfile /etc/caddy/Caddyfile
 COPY index.html ai-grid-trader.html ai-grid-trader-case-study.html pitwall-case-study.html battery-wear-cost.html perfect-hindsight-benchmark.html about.html 404.html robots.txt sitemap.xml manifest.webmanifest sw.js /srv/
 COPY assets /srv/assets
+# The Pitwall dashboard, copied from its own repository by tools/sync_pitwall.py.
+COPY pitwall /srv/pitwall
 # Stamp this build into file addresses (style.css?v=…) and the offline cache name, so every deploy
 # is fetched fresh by browsers and Cloudflare instead of mixing new pages with old cached files.
 RUN BUILD=$(date -u +%Y%m%d%H%M%S) && \
