@@ -1,0 +1,25 @@
+{
+  "description": "Files this repository publishes on baizakisaev.com. The portfolio repository (nolimitbaiza/portfolio) copies them with tools/sync_projects.py: each entry maps a file, or a folder ending in /, from this repository to its address on the site. Shared files (styles, fonts, site scripts, icons) come from the portfolio itself.",
+  "publish": [
+    { "from": "ai-grid-trader.html", "to": "ai-grid-trader.html" },
+    { "from": "ai-grid-trader-case-study.html", "to": "ai-grid-trader-case-study.html" },
+    { "from": "assets/app.js", "to": "assets/app.js" },
+    { "from": "assets/engine.js", "to": "assets/engine.js" },
+    { "from": "assets/data/", "to": "assets/data/" },
+    { "from": "assets/vendor/", "to": "assets/vendor/" },
+    { "from": "assets/og.png", "to": "assets/og.png" },
+    { "from": "assets/og-case-study.png", "to": "assets/og-case-study.png" },
+    { "from": "assets/img/demo-loop.jpg", "to": "assets/img/demo-loop.jpg" },
+    { "from": "assets/img/demo-loop-dark.jpg", "to": "assets/img/demo-loop-dark.jpg" },
+    { "from": "assets/img/chart-replay.jpg", "to": "assets/img/chart-replay.jpg" },
+    { "from": "assets/img/chart-replay-dark.jpg", "to": "assets/img/chart-replay-dark.jpg" },
+    { "from": "assets/img/project-chart-phone.png", "to": "assets/img/project-chart-phone.png" },
+    { "from": "assets/img/project-chart-phone.webp", "to": "assets/img/project-chart-phone.webp" },
+    { "from": "assets/img/project-chart-phone-dark.png", "to": "assets/img/project-chart-phone-dark.png" },
+    { "from": "assets/img/project-chart-phone-dark.webp", "to": "assets/img/project-chart-phone-dark.webp" },
+    { "from": "assets/video/demo-loop.webm", "to": "assets/video/demo-loop.webm" },
+    { "from": "assets/video/demo-loop-dark.webm", "to": "assets/video/demo-loop-dark.webm" },
+    { "from": "assets/video/chart-replay.webm", "to": "assets/video/chart-replay.webm" },
+    { "from": "assets/video/chart-replay-dark.webm", "to": "assets/video/chart-replay-dark.webm" }
+  ]
+}
