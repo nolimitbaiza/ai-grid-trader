@@ -93,6 +93,11 @@ jobs:
           expect 200 /ai-grid-trader      "chart-main"
           expect 200 /ai-grid-trader-case-study "Perfect hindsight"
           expect 200 /pitwall-case-study  "Who built what"
+          expect 200 /pitwall/            "Pitwall"
+          expect 301 /pitwall
+          expect 200 /pitwall/data.json   "constructors"
+          expect 200 /pitwall/app.js      "seasonStats"
+          expect 404 /pitwall/api/data
           expect 200 /assets/Baizak-Isaev-Resume.pdf "%PDF"
           expect 200 /battery-wear-cost   "Does the agent need to know"
           expect 200 /perfect-hindsight-benchmark "What a worse forecast costs"
@@ -106,6 +111,7 @@ jobs:
           expect 200 /robots.txt          "Sitemap"
           expect 200 /sitemap.xml         "ai-grid-trader"
           expect 200 /sitemap.xml         "pitwall-case-study"
+          expect 200 /sitemap.xml         "pitwall/"
           expect 404 /no-such-page        "Page not found"
           # Every build stamp was filled in, and the security headers are sent.
           if curl -s http://localhost:8080/ | grep -q "__BUILD__"; then echo "FAIL: unfilled build stamp"; exit 1; fi
@@ -121,6 +127,7 @@ jobs:
           cache "/ai-grid-trader-case-study"          "no-cache"
           cache "/?v=1"                               "no-cache"
           cache "/sw.js"                              "no-cache"
+          cache "/pitwall/data.json"                  "no-cache"
           cache "/assets/style.css"                   "no-cache"
           cache "/assets/style.css?v=1"               "public, max-age=31536000, immutable"
           cache "/assets/img/project-chart-phone.webp?v=1"  "public, max-age=31536000, immutable"
