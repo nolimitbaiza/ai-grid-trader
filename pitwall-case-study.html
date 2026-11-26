@@ -360,11 +360,16 @@
           <h2 class="section-title-v2" id="next-title">What I'd build next.</h2>
         </div>
         <div class="cs-body" data-reveal style="--i:1">
+          <h3>Built since the first version</h3>
+          <ul class="cs-list">
+            <li><strong>One scoring system for every era.</strong> A switch re-scores every race with today's points, so
+              eras compare like with like. McLaren's 1988 season goes from 199 to 576 points, and the 1958 title moves from
+              Vanwall to Ferrari, because back then only each team's best car scored.</li>
+            <li><strong>Automatic updates.</strong> After every race weekend, a scheduled job loads the new results from the
+              Jolpica F1 API, rebuilds the data, runs the tests and publishes the update. This site copies it the same day.</li>
+          </ul>
+          <h3>Still on the list</h3>
           <ol class="cs-next">
-            <li><strong>One scoring system for every era.</strong> Re-scoring every race under today's points system would
-              compare like with like, and show how much of the gap between 1988 and 2023 is the rules.</li>
-            <li><strong>Automatic updates.</strong> The data stops at August 2025. A scheduled job that loads each new race
-              would finish the season and keep the archive current.</li>
             <li><strong>A hosted API.</strong> The live demo runs on a snapshot. Deploying the Express API with PostgreSQL
               would put the REST endpoints online too.</li>
             <li><strong>One pipeline.</strong> My staged pipeline and the app's importer read the same raw tables separately.
