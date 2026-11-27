@@ -5,7 +5,7 @@ Wide screens show looping clips and their stills instead: the home page's card f
 tools/build_demo_loop.py, the case study's figure from tools/build_demo_video.py.
 
 After running it, copy the printed sizes into the width/height attributes of the matching <img>
-and <source> elements in index.html and ai-grid-trader-case-study.html.
+and <source> elements in ai-grid-trader-case-study.html and in the portfolio repository's index.html.
 
 Usage: serve the repo locally (python tools/serve.py), then
        python tools/build_project_shot.py [http://localhost:8600/]

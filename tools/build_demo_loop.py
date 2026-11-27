@@ -11,7 +11,8 @@ Needs Playwright with Chromium (pip install playwright && playwright install chr
 Frames come from Chromium's screencast and are encoded to VP9 WebM with the ffmpeg build that
 Playwright installs, so nothing else is needed. Writes assets/video/demo-loop{,-dark}.webm and
 assets/img/demo-loop{,-dark}.jpg, and prints the second each slide starts at: put the earlier of
-the two videos' times in the video's data-scenes in index.html (the card's back and forward arrows).
+the two videos' times in the video's data-scenes in the portfolio repository's index.html (the
+card's back and forward arrows), along with the videos' sizes if they changed.
 """
 import glob
 import os

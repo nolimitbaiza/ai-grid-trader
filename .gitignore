@@ -5,5 +5,3 @@ venv/
 .streamlit/secrets.toml
 .DS_Store
 Thumbs.db
-# Checkout used by the Sync Pitwall workflow
-.pitwall-source/

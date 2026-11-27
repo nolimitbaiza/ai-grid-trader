@@ -70,13 +70,19 @@ scored on the prices that actually occurred.
 
 ## Run it locally
 
+The demo uses the shared styles and server of [baizakisaev.com](https://baizakisaev.com), which
+live in the [portfolio repository](https://github.com/nolimitbaiza/portfolio); check it out next to
+this one once:
+
 ```bash
-python tools/serve.py        # then open http://localhost:8600/
+git clone https://github.com/nolimitbaiza/portfolio ../portfolio
+python tools/serve.py        # then open http://localhost:8600/ai-grid-trader
 node --test tests/engine.test.js
 ```
 
-GitHub Actions runs the model tests, browser checks in Firefox, Chromium and WebKit, an upgrade
-check, and a production image smoke test on every push.
+GitHub Actions runs the model tests on every push, and the site's own checks with this checkout:
+browser checks in Firefox, Chromium and WebKit, an upgrade check, and a production image smoke
+test. The portfolio publishes the files listed in `publish.json` on the site every hour.
 
 ## Documentation
 
