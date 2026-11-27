@@ -10,12 +10,15 @@ dark video, plus a still of each for the poster.
 Needs Playwright with Chromium (pip install playwright && playwright install chromium ffmpeg).
 Frames come from Chromium's screencast and are encoded to VP9 WebM with the ffmpeg build that
 Playwright installs, so nothing else is needed. Writes assets/video/demo-loop{,-dark}.webm and
-assets/img/demo-loop{,-dark}.jpg.
+assets/img/demo-loop{,-dark}.jpg, and prints the second each slide starts at: put the earlier of
+the two videos' times in the video's data-scenes in index.html (the card's back and forward arrows).
 """
 import glob
 import os
+import math
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
@@ -67,10 +70,12 @@ def record(pw, scheme, suffix):
     cdp.send("Page.startScreencast", {"format": "jpeg", "quality": 92,
                                       "maxWidth": int(SIZE[0] * SCALE), "maxHeight": int(SIZE[1] * SCALE)})
     page.wait_for_timeout(200)
+    pressed = []                                      # when each slide was asked for (wall clock)
     for hold, key in SCRIPT:
         page.wait_for_timeout(int(hold * 1000))
         if key:
             page.keyboard.press(key)
+            pressed.append(time.time())
     cdp.send("Page.stopScreencast")
     browser.close()
 
@@ -95,6 +100,7 @@ def record(pw, scheme, suffix):
     if proc.wait():
         sys.exit("ffmpeg failed")
     print(f"{out.relative_to(ROOT)}: {len(frames)} frames, {total:.1f} s, {out.stat().st_size / 1e6:.2f} MB")
+    print("  slides start at", " ".join(["0"] + [f"{math.floor((p - start) * 10) / 10:g}" for p in pressed]))
 
 
 with sync_playwright() as pw:
