@@ -1,7 +1,12 @@
 # Runs on every push and pull request:
 #   test       the trading model (tests/engine.test.js) and syntax checks
-#   browsers   both pages in real browsers (tools/browser_check.py) and the release-upgrade check
+#   browsers   the site in real browsers and the release-upgrade check
 #   container  the production image: it builds, the server config is valid, the addresses answer
+#
+# baizakisaev.com is put together by the portfolio repository (nolimitbaiza/portfolio), which
+# copies this repository's publish.json files every hour. So the browsers and container jobs check
+# out the portfolio, put this checkout in place of its copy of AI Grid Trader and run the portfolio's
+# own checks: the demo and the case study are tested exactly as the live site would serve them.
 name: Tests
 
 on:
@@ -23,8 +28,7 @@ jobs:
         run: |
           node --check assets/engine.js
           node --check assets/app.js
-          node --check assets/site.js
-          node --check sw.js
+          node --check tools/writing_numbers.js
 
       - name: Model tests
         run: node --test tests/engine.test.js
@@ -43,10 +47,21 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: ai-grid-trader
+
+      - uses: actions/checkout@v4
+        with:
+          repository: nolimitbaiza/portfolio
+          path: portfolio
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: The site, with this checkout as AI Grid Trader
+        working-directory: portfolio
+        run: python tools/sync_projects.py --local ai-grid-trader=../ai-grid-trader
 
       - name: Install Playwright browsers
         run: |
@@ -54,88 +69,51 @@ jobs:
           python -m playwright install --with-deps chromium firefox webkit
 
       - name: Browser checks
+        working-directory: portfolio
         run: |
           python tools/serve.py 8600 > /dev/null 2>&1 &
           sleep 2
           python tools/browser_check.py http://localhost:8600/ shots firefox,chromium,webkit,ipad,offline
 
       - name: Release upgrade (returning visitors get new files, not cached ones)
+        working-directory: portfolio
         run: python tools/upgrade_check.py
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: browser-screenshots
-          path: shots/
+          path: portfolio/shots/
 
   container:
-    # Builds the image Railway runs (Dockerfile + Caddyfile) and checks the addresses the live
-    # site must answer, so a broken server configuration is caught before it is deployed.
+    # Builds the image Railway runs (the portfolio's Dockerfile and Caddyfile) with this checkout's
+    # files and checks the addresses the live site must answer.
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: ai-grid-trader
+
+      - uses: actions/checkout@v4
+        with:
+          repository: nolimitbaiza/portfolio
+          path: portfolio
+
+      - name: The site, with this checkout as AI Grid Trader
+        working-directory: portfolio
+        run: python3 tools/sync_projects.py --local ai-grid-trader=../ai-grid-trader
 
       - name: Build the image
+        working-directory: portfolio
         run: docker build -t site .
 
       - name: Smoke test
+        working-directory: portfolio
         run: |
           docker run -d --name site -p 8080:8080 site
           sleep 2
-          expect() {   # expect <status> <path> [text the page must contain]
-            status=$(curl -s -o body.txt -w "%{http_code}" "http://localhost:8080$2")
-            if [ "$status" != "$1" ]; then echo "FAIL $2: status $status, expected $1"; exit 1; fi
-            if [ -n "$3" ] && ! grep -q "$3" body.txt; then echo "FAIL $2: page lacks '$3'"; exit 1; fi
-            echo "ok   $2 -> $status"
-          }
-          expect 200 /                    "About me"
-          expect 200 /ai-grid-trader      "chart-main"
-          expect 200 /ai-grid-trader-case-study "Perfect hindsight"
-          expect 200 /pitwall-case-study  "Who built what"
-          expect 200 /pitwall/            "Pitwall"
-          expect 301 /pitwall
-          expect 200 /pitwall/data.json   "constructors"
-          expect 200 /pitwall/app.js      "seasonStats"
-          expect 404 /pitwall/api/data
-          expect 200 /assets/Baizak-Isaev-Resume.pdf "%PDF"
-          expect 200 /battery-wear-cost   "Does the agent need to know"
-          expect 200 /perfect-hindsight-benchmark "What a worse forecast costs"
-          expect 200 /assets/video/demo-loop.webm "webm"
-          expect 200 /assets/video/pitwall-loop.webm "webm"
-          curl -sI http://localhost:8080/assets/video/demo-loop.webm | grep -qi "content-type: video/webm" \
-            || { echo "FAIL demo loop is not served as video/webm"; exit 1; }
-          expect 301 /about.html
-          expect 301 /ai-grid-trader.html
-          expect 301 /pitwall-case-study.html
-          expect 200 /robots.txt          "Sitemap"
-          expect 200 /sitemap.xml         "ai-grid-trader"
-          expect 200 /sitemap.xml         "pitwall-case-study"
-          expect 200 /sitemap.xml         "pitwall/"
-          expect 404 /no-such-page        "Page not found"
-          # Every build stamp was filled in, and the security headers are sent.
-          if curl -s http://localhost:8080/ | grep -q "__BUILD__"; then echo "FAIL: unfilled build stamp"; exit 1; fi
-          curl -sI http://localhost:8080/ | grep -qi "x-content-type-options: nosniff" || { echo "FAIL: security headers missing"; exit 1; }
-          echo "ok   build stamps and security headers"
-          # Caching: pages and unstamped files are re-checked; build-stamped files and fonts keep a year.
-          cache() {   # cache <path> <expected Cache-Control>
-            got=$(curl -sI "http://localhost:8080$1" | tr -d '\r' | grep -i "^cache-control:" | cut -d' ' -f2-)
-            if [ "$got" != "$2" ]; then echo "FAIL cache $1: '$got', expected '$2'"; exit 1; fi
-            echo "ok   cache $1 -> $got"
-          }
-          cache "/"                                   "no-cache"
-          cache "/ai-grid-trader-case-study"          "no-cache"
-          cache "/?v=1"                               "no-cache"
-          cache "/sw.js"                              "no-cache"
-          cache "/pitwall/data.json"                  "no-cache"
-          cache "/assets/style.css"                   "no-cache"
-          cache "/assets/style.css?v=1"               "public, max-age=31536000, immutable"
-          cache "/assets/img/project-chart-phone.webp?v=1"  "public, max-age=31536000, immutable"
-          cache "/assets/fonts/inter-latin-var.woff2" "public, max-age=31536000, immutable"
-          cache "/assets/vendor/plotly-basic-2.35.2.min.js" "public, max-age=31536000, immutable"
-          expect 200 /assets/img/project-chart-phone.webp "WEBP"
-          curl -sI http://localhost:8080/assets/img/project-chart-phone.webp | grep -qi "content-type: image/webp" \
-            || { echo "FAIL screenshots are not served as image/webp"; exit 1; }
+          bash tools/smoke_test.sh http://localhost:8080
 
       - name: Server log
         if: always()

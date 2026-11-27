@@ -1,7 +1,8 @@
 # Keeps the demo on the latest full calendar year of real prices.
 # Once a month it checks whether a newer complete year is available (e.g. 2026 once January 2027
 # starts). If so it downloads that year's public data, rebuilds assets/data/, runs the tests and
-# publishes the update; GitHub Pages then serves it. Otherwise it does nothing.
+# publishes the update; the portfolio's hourly sync then puts it on baizakisaev.com. Otherwise it
+# does nothing.
 # Run it by hand from the Actions tab ("Refresh market data" > "Run workflow") to pick a year.
 name: Refresh market data
 

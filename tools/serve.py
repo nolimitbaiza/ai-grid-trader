@@ -1,71 +1,29 @@
-"""Local web server that behaves like the live site (see Caddyfile): clean URLs, so / is the
-home page and /ai-grid-trader serves ai-grid-trader.html, and unknown addresses get 404.html.
+"""Preview the demo and the case study as they appear on baizakisaev.com.
 
-Usage: python tools/serve.py [port]        (default 8600, serves the repository folder)
+The site is put together by the portfolio repository (nolimitbaiza/portfolio): the home page, the
+posts and everything the pages share (styles, fonts, the header, the offline service worker) live
+there, along with the server. This runs the portfolio's tools/serve.py with this checkout in place
+of its copy of AI Grid Trader, so the files listed in publish.json are served from here and edits
+show up on reload. A file that publish.json doesn't list is not served, just as on the live site.
+
+Usage: python tools/serve.py [port]        (default 8600, then open http://localhost:8600/ai-grid-trader)
+Needs: the portfolio checked out next to this repository, or its folder in the PORTFOLIO variable:
+       git clone https://github.com/nolimitbaiza/portfolio ../portfolio
 """
-import http.server
-import io
 import os
-import re
+import subprocess
 import sys
-from functools import partial
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8600
+PORTFOLIO = Path(os.environ.get("PORTFOLIO", ROOT.parent / "portfolio")).resolve()
+SERVER = PORTFOLIO / "tools" / "serve.py"
 
-
-class Handler(http.server.SimpleHTTPRequestHandler):
-    def translate_path(self, path):
-        local = super().translate_path(path)
-        if not os.path.exists(local) and os.path.exists(local + ".html"):
-            return local + ".html"
-        return local
-
-    def send_head(self):
-        # Byte ranges, as Caddy sends them: browsers can only seek a video that the server serves in parts.
-        match = re.fullmatch(r"bytes=(\d*)-(\d*)", self.headers.get("Range", ""))
-        local = self.translate_path(self.path)
-        if not match or not os.path.isfile(local) or match.group(1) == match.group(2) == "":
-            return super().send_head()
-        size = os.path.getsize(local)
-        first, last = match.groups()
-        start = int(first) if first else max(size - int(last), 0)
-        end = min(int(last), size - 1) if first and last else size - 1
-        if start > end:
-            self.send_response(416)
-            self.send_header("Content-Range", f"bytes */{size}")
-            self.send_header("Content-Length", "0")
-            self.end_headers()
-            return None
-        with open(local, "rb") as f:
-            f.seek(start)
-            body = f.read(end - start + 1)
-        self.send_response(206)
-        self.send_header("Content-Type", self.guess_type(local))
-        self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
-        self.send_header("Content-Length", str(len(body)))
-        self.send_header("Accept-Ranges", "bytes")
-        self.end_headers()
-        return io.BytesIO(body)
-
-    def send_error(self, code, message=None, explain=None):
-        page = Path(self.directory) / "404.html"
-        if code != 404 or not page.exists():
-            return super().send_error(code, message, explain)
-        body = page.read_bytes()
-        self.send_response(404)
-        self.send_header("Content-Type", "text/html; charset=utf-8")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        if self.command != "HEAD":
-            self.wfile.write(body)
-
-    def log_message(self, *args):
-        pass
-
-
-if __name__ == "__main__":
-    server = http.server.ThreadingHTTPServer(("", PORT), partial(Handler, directory=str(ROOT)))
-    print(f"Serving {ROOT} on http://localhost:{PORT}/", flush=True)
-    server.serve_forever()
+if not SERVER.is_file():
+    sys.exit(f"The portfolio repository was not found at {PORTFOLIO}.\n"
+             f"Clone it next to this one:  git clone https://github.com/nolimitbaiza/portfolio {ROOT.parent / 'portfolio'}\n"
+             "or set PORTFOLIO to its folder.")
+try:
+    sys.exit(subprocess.call([sys.executable, str(SERVER), *sys.argv[1:], "--project", f"ai-grid-trader={ROOT}"]))
+except KeyboardInterrupt:
+    pass

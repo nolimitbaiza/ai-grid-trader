@@ -1,5 +1,5 @@
 // Reproduces the numbers quoted in the two posts (battery-wear-cost.html and
-// perfect-hindsight-benchmark.html): full-year simulations on the real 2025 prices, with the
+// perfect-hindsight-benchmark.html, in the portfolio repository): full-year simulations on the real 2025 prices, with the
 // demo's default battery and settings for each market.
 // Run with:  node tools/writing_numbers.js   (Node 18+, no installs needed; takes about a minute)
 "use strict";
