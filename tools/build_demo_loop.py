@@ -30,8 +30,10 @@ FPS = 25
 SIZE = (1280, 720)           # CSS pixels: the presenter layout at 16:9
 SCALE = 1.5                  # recorded at 1920x1080 so it stays sharp on high-resolution screens
 # (seconds to hold, then the key that moves on); the trades step stops at the buy, then the sell.
-SCRIPT = [(2.5, "ArrowRight"), (4.5, "ArrowRight"), (4.5, "ArrowRight"), (6.0, "ArrowRight"),
-          (4.0, "ArrowRight"), (5.0, None)]
+# About six seconds a slide, so each can be read before it moves on; the 48-hour replay gets a
+# little longer, as it plays before it can be read.
+SCRIPT = [(6.0, "ArrowRight"), (6.0, "ArrowRight"), (6.0, "ArrowRight"), (7.5, "ArrowRight"),
+          (6.0, "ArrowRight"), (6.5, None)]
 HIDE = ".stage-pick, .stage-keys, #stage-close, .stage-nav { visibility: hidden !important; }"
 
 
@@ -65,7 +67,10 @@ def record(pw, scheme, suffix):
 
     def on_frame(ev):
         frames.append((ev["metadata"]["timestamp"], ev["data"]))
-        cdp.send("Page.screencastFrameAck", {"sessionId": ev["sessionId"]})
+        try:
+            cdp.send("Page.screencastFrameAck", {"sessionId": ev["sessionId"]})
+        except Exception:                             # a last frame can arrive as the browser closes
+            pass
 
     cdp.on("Page.screencastFrame", on_frame)
     cdp.send("Page.startScreencast", {"format": "jpeg", "quality": 92,
